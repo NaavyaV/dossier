@@ -127,7 +127,7 @@ export function scoreLarp(profile: Input, _now = new Date()): LarpScore {
   );
 
   const pipes = (headline.match(/[|•·/]/g) ?? []).length;
-  push("pipes", "Stacked headline", `${pipes} separators in the headline`, pipes >= 3 ? 10 : pipes === 2 ? 6 : 0);
+  push("pipes", "Stacked headline", `${pipes} separators in the headline`, pipes >= 3 ? 8 : pipes === 2 ? 5 : 0);
 
   push("theater-title", "Theater title", title || "current title", THEATER_TITLE.test(`${title} ${headline}`) ? 14 : 0);
 
@@ -136,7 +136,7 @@ export function scoreLarp(profile: Input, _now = new Date()): LarpScore {
     "multi-current",
     "Several jobs at once",
     `${currentCount} role${currentCount === 1 ? "" : "s"} marked current`,
-    Math.min(21, Math.max(0, currentCount - 1) * 7),
+    Math.min(9, Math.max(0, currentCount - 1) * 3),
   );
 
   const chiefsInHistory = profile.experience.filter((e) => CHIEF.test(e.title ?? "")).length;
@@ -153,7 +153,7 @@ export function scoreLarp(profile: Input, _now = new Date()): LarpScore {
   push("bangs", "Exclamation marks", `${bangs} in the headline and about`, Math.min(9, bangs * 3));
 
   const emoji = (headline.match(EMOJI) ?? []).length + (about.match(EMOJI) ?? []).length;
-  push("emoji", "Emoji", `${emoji} in the headline and about`, Math.min(8, emoji * 2));
+  push("emoji", "Emoji", `${emoji} in the headline and about`, Math.min(4, emoji));
 
   for (const s of signals) total += s.id === "base" ? 0 : s.points;
   const percent = Math.max(0, Math.min(100, Math.round(total)));

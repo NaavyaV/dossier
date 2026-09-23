@@ -27,7 +27,7 @@ export function ProfileCard({ profile }: { profile: Profile }) {
 
         <p className={`display mt-6 text-[5.5rem] leading-none tabular-nums ${tone.text}`}>
           {profile.larp.percent}
-          <span className="text-[0.4em]">%</span>
+          <span className="text-[0.38em]">% LARP</span>
         </p>
         <p className={`mt-1 text-[15px] font-semibold ${tone.text}`}>{tone.label}</p>
         <p className="mt-1 text-[15px] text-ink-2">{profile.larp.line}</p>

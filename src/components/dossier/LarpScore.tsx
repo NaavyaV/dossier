@@ -36,7 +36,7 @@ export function LarpScoreCard({ larp, i = 0 }: { larp: LarpScoreT; i?: number })
           <div className="mt-2 flex items-end gap-3">
             <p className={`display text-[clamp(4.5rem,10vw,6.5rem)] leading-none tabular-nums ${VERDICT_TEXT[larp.verdict]}`}>
               {larp.percent}
-              <span className="text-[0.42em]">%</span>
+              <span className="text-[0.38em]">% LARP</span>
             </p>
             <p className={`mb-2 text-[15px] font-semibold ${VERDICT_TEXT[larp.verdict]}`}>{VERDICT_LABEL[larp.verdict]}</p>
           </div>

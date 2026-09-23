@@ -106,6 +106,25 @@ describe("scoreLarp", () => {
     );
     expect(likeSiddharth.percent).toBe(45);
 
+    const likeNaavya = scoreLarp(
+      profile({
+        headline: { value: "ML Fellow @ BTT | AI Research Intern | Solo Hackathon Winner 🚀🎯", sources: [src()], confidence: 0.8 },
+        about: { value: "I’m a student passionate about building systems.", sources: [src()], confidence: 0.8 },
+        skills: Array.from({ length: 19 }, (_, i) => ({ id: `sk-${i}`, name: `Skill ${i}`, sources: [src()], confidence: 0.5 })),
+        experience: Array.from({ length: 10 }, (_, i) => ({
+          id: `exp-${i}`,
+          title: "Intern",
+          company: `Co ${i}`,
+          start: { year: 2022 },
+          ...(i < 4 ? { current: true } : { end: { year: 2023 } }),
+          sources: [src()],
+          confidence: 0.8,
+        })),
+      }),
+      NOW,
+    );
+    expect(likeNaavya.percent).toBe(85);
+
     expect(wordy.percent).toBeGreaterThan(one.percent);
     expect(career.percent).toBeGreaterThan(one.percent);
     expect(career.percent).toBeLessThan(50);

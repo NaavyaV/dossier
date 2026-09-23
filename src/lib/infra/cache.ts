@@ -79,6 +79,6 @@ export function createCache(kv?: KVNamespace): CacheStore {
 }
 
 export const CACHE_KEYS = {
-  profile: (slug: string) => `profile:v3:${slug}`,
+  profile: (slug: string) => `profile:v4:${slug}`,
   notFound: (slug: string) => `notfound:v1:${slug}`,
 };
