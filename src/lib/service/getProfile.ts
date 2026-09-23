@@ -60,7 +60,10 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
     if (hit) {
       const valid = Profile.safeParse(hit.value);
       if (valid.success) {
-        return { profile: valid.data, cache: { hit: true, cachedAt: hit.cachedAt, expiresAt: hit.expiresAt, ttlSeconds: ttl } };
+        return {
+          profile: { ...valid.data, larp: scoreLarp(valid.data) },
+          cache: { hit: true, cachedAt: hit.cachedAt, expiresAt: hit.expiresAt, ttlSeconds: ttl },
+        };
       }
       // Schema drift — drop the entry and refetch.
       await cache.delete(CACHE_KEYS.profile(slug));

@@ -1,5 +1,6 @@
 import type { RuntimeEnv } from "@/lib/infra/env";
 import { intFromEnv } from "@/lib/infra/env";
+import { DEMO_SLUG, LARP_SLUG } from "./demo";
 import type {
   CertificationInput,
   EducationInput,
@@ -220,9 +221,32 @@ function actorId(env: RuntimeEnv): string {
   return raw.replace("/", "~");
 }
 
+const SAVED_TTL_SECONDS = 30 * 24 * 60 * 60;
+const EMPTY_TTL_SECONDS = 7 * 24 * 60 * 60;
+const savedKey = (slug: string) => `apify:v1:${slug}`;
+const lockKey = (slug: string) => `apify:lock:${slug}`;
+
+type Saved = { status: "ok"; profile: ProviderProfile; observedAt: string } | { status: "empty"; observedAt: string };
+
+function outcomeFromSaved(saved: Saved, canonicalUrl: string): ProviderOutcome {
+  const meta = {
+    provider: ID,
+    label: LABEL,
+    observedAt: saved.observedAt,
+    baseConfidence: 0.84,
+    license: LICENSE,
+    sourceUrl: canonicalUrl,
+  };
+  if (saved.status === "empty") return { status: "empty", meta, note: "Already checked. No public profile." };
+  return { status: "ok", profile: saved.profile, meta };
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
   const token = env.APIFY_TOKEN;
   const actor = actorId(env);
+  const kv = env.PROFILE_CACHE;
   return {
     id: ID,
     label: LABEL,
@@ -234,6 +258,34 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
     disabledReason: () => "APIFY_TOKEN not set — LinkedIn profiles need an Apify token",
 
     async lookup(input: LookupInput, ctx: LookupContext): Promise<ProviderOutcome> {
+      if (input.slug === DEMO_SLUG || input.slug === LARP_SLUG) {
+        return { status: "skipped", note: "Sample profiles are not fetched from LinkedIn." };
+      }
+
+      const readSaved = async () => (kv ? kv.get<Saved>(savedKey(input.slug), "json") : null);
+      const saved = await readSaved();
+      if (saved?.status === "ok" || saved?.status === "empty") return outcomeFromSaved(saved, input.canonicalUrl);
+
+      if (kv) {
+        const locked = await kv.get(lockKey(input.slug));
+        if (locked) {
+          for (let i = 0; i < 25 && !ctx.signal.aborted; i++) {
+            await sleep(1000);
+            const later = await readSaved();
+            if (later?.status === "ok" || later?.status === "empty") return outcomeFromSaved(later, input.canonicalUrl);
+          }
+          return { status: "unavailable", note: "This profile is already being fetched." };
+        }
+        await kv.put(lockKey(input.slug), "1", { expirationTtl: 90 });
+      }
+
+      try {
+        return await fetchOnce();
+      } finally {
+        await kv?.delete(lockKey(input.slug));
+      }
+
+      async function fetchOnce(): Promise<ProviderOutcome> {
       const timeoutSec = Math.max(10, Math.floor((intFromEnv(env.APIFY_TIMEOUT_MS, 55_000) - 4000) / 1000));
       const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actor)}/run-sync-get-dataset-items?timeout=${timeoutSec}`;
       const { status, body } = await fetchJson(url, {
@@ -272,12 +324,23 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
 
       const items = Array.isArray(body) ? body : arr((body as Rec | null)?.items);
       const first = items.find((it) => it && typeof it === "object") as Rec | undefined;
-      if (!first) return { status: "empty", meta, note: "Apify returned no profile for this handle." };
+      if (!first) {
+        await remember({ status: "empty", observedAt });
+        return { status: "empty", meta, note: "No public profile for this handle." };
+      }
       const profile = mapApify(first);
       if (!profile.fullName && !profile.headline && !profile.experience?.length) {
-        return { status: "empty", meta, note: "Apify returned a record with no usable profile fields." };
+        await remember({ status: "empty", observedAt });
+        return { status: "empty", meta, note: "No usable public profile for this handle." };
       }
+      await remember({ status: "ok", profile, observedAt });
       return { status: "ok", profile, meta };
+
+      async function remember(entry: Saved) {
+        const ttl = entry.status === "ok" ? SAVED_TTL_SECONDS : EMPTY_TTL_SECONDS;
+        await kv?.put(savedKey(input.slug), JSON.stringify(entry), { expirationTtl: ttl });
+      }
+      }
     },
   };
 }
