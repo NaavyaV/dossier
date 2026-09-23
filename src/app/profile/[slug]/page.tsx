@@ -55,8 +55,8 @@ export default async function ProfilePage({
 const ERROR_COPY: Record<AppError["code"], { title: string; hint: string }> = {
   INVALID_INPUT: { title: "That isn't a profile handle we can look up", hint: "Paste a URL like linkedin.com/in/handle, or just the handle." },
   RATE_LIMITED: { title: "Too many lookups from your network", hint: "Wait a moment and try again. Cached profiles are always available." },
-  NOT_FOUND: { title: "No public record for this handle", hint: "Wikidata has no entry for this LinkedIn ID. Set APIFY_TOKEN to pull the profile through Apify." },
-  NO_PROVIDERS: { title: "No data sources are configured", hint: "Set APIFY_TOKEN as a Worker secret. The token is on Apify Console → Settings → API & Integrations." },
+  NOT_FOUND: { title: "No public record for this handle", hint: "Nothing public turned up for this LinkedIn profile." },
+  NO_PROVIDERS: { title: "No data sources are configured", hint: "LinkedIn lookups are not set up on this deployment." },
   UPSTREAM_ERROR: { title: "Sources didn't respond", hint: "One or more providers failed or timed out. Try again shortly." },
   TIMEOUT: { title: "Sources took too long", hint: "Try again shortly." },
   INTERNAL: { title: "Something went wrong", hint: "The error has been logged. Try again, or try a different handle." },

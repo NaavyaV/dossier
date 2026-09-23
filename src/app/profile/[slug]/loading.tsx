@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SearchForm } from "@/components/SearchForm";
 import { TopBar } from "@/components/ui";
 
-const STEPS = ["Looking through this...", "Checking Apify...", "Checking Wikidata...", "Calculating LARP score..."];
+const STEPS = ["Looking through this...", "Checking LinkedIn...", "Checking Wikidata...", "Calculating LARP score..."];
 
 export default function Loading() {
   const [step, setStep] = useState(0);

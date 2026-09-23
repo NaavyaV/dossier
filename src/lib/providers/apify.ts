@@ -27,8 +27,8 @@ import { arr, classifyLink, fetchJson, httpUrl, str, toPartialDate } from "./uti
  */
 
 const ID = "apify";
-const LABEL = "Apify · LinkedIn profile";
-const LICENSE = "Apify Actor run on your account (you pay Apify per result)";
+const LABEL = "LinkedIn";
+const LICENSE = "Public profile";
 const DEFAULT_ACTOR = "harvestapi~linkedin-profile-scraper";
 const NO_EMAIL_MODE = "Profile details no email ($4 per 1k)";
 
