@@ -24,7 +24,7 @@
   "vars": {
     // Non-secret configuration. Secrets (APIFY_TOKEN, GITHUB_TOKEN)
     // are set with `wrangler secret put <NAME>`.
-    "CACHE_TTL_SECONDS": "86400",
+    "CACHE_TTL_SECONDS": "2592000",
     "RATE_LIMIT_MAX": "30",
     "RATE_LIMIT_WINDOW_SECONDS": "600",
     "PROVIDER_TIMEOUT_MS": "9000",
