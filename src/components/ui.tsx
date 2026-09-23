@@ -17,9 +17,9 @@ export function Wordmark({ className = "" }: { className?: string }) {
 export function TopBar({ children }: { children?: React.ReactNode }) {
   return (
     <header className="sticky top-0 z-30 border-b border-rule bg-paper/85 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-4">
         <Wordmark />
-        <div className="flex-1 min-w-0">{children}</div>
+        <div className="min-w-0 flex-1">{children}</div>
       </div>
     </header>
   );

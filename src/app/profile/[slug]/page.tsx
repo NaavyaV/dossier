@@ -39,9 +39,7 @@ export default async function ProfilePage({
   return (
     <>
       <TopBar>
-        <div className="max-w-md">
-          <SearchForm size="sm" />
-        </div>
+        <SearchForm size="sm" />
       </TopBar>
       <main className="flex flex-1 justify-center px-4 py-8 sm:py-12">
         {error || !result ? (
