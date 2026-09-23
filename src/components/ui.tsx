@@ -10,7 +10,6 @@ export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <Link href="/" className={`inline-flex items-baseline gap-2.5 no-underline ${className}`} aria-label="LARP detector home">
       <span className="display-condensed text-[22px] text-ink">LARP</span>
-      <span className="hidden text-[13px] text-ink-3 lg:inline">is it real or is it larp?</span>
     </Link>
   );
 }
@@ -21,13 +20,6 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Wordmark />
         <div className="flex-1 min-w-0">{children}</div>
-        <nav className="hidden md:flex items-center gap-5 text-[13px] text-ink-2">
-          <Link href="/#how" className="hover:text-ink">How it works</Link>
-          <Link href="/api/health" className="hover:text-ink">API</Link>
-          <a href="https://github.com/NaavyaV/dossier" target="_blank" rel="noreferrer" className="hover:text-ink">
-            Source
-          </a>
-        </nav>
       </div>
     </header>
   );

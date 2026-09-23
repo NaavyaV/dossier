@@ -2,24 +2,9 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { SearchForm } from "@/components/SearchForm";
-import { DossierHeader } from "@/components/dossier/Header";
-import { LarpScoreCard } from "@/components/dossier/LarpScore";
-import { Ledger, SourcesPanel } from "@/components/dossier/Ledger";
-import {
-  About,
-  CertificationsSection,
-  EducationSection,
-  ExperienceSection,
-  LinksSection,
-  MissingSection,
-  ProjectsSection,
-  PublicationsSection,
-  SkillsSection,
-  VolunteerSection,
-} from "@/components/dossier/Sections";
-import { Badge, Eyebrow, TopBar } from "@/components/ui";
+import { ProfileCard } from "@/components/dossier/Card";
+import { TopBar } from "@/components/ui";
 import { toAppError, type AppError } from "@/lib/errors";
-import { parseLinkedInUrl } from "@/lib/linkedin/url";
 import { getProfile, type GetProfileResult } from "@/lib/service/getProfile";
 
 export const dynamic = "force-dynamic";
@@ -51,9 +36,6 @@ export default async function ProfilePage({
     if (error.code === "INTERNAL") console.error("[profile page]", e);
   }
 
-  const parsed = parseLinkedInUrl(slug);
-  const canonical = parsed.ok ? parsed.value.canonicalUrl : `https://www.linkedin.com/in/${encodeURIComponent(slug)}`;
-
   return (
     <>
       <TopBar>
@@ -61,52 +43,14 @@ export default async function ProfilePage({
           <SearchForm size="sm" />
         </div>
       </TopBar>
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
+      <main className="flex flex-1 justify-center px-4 py-8 sm:py-12">
         {error || !result ? (
-          <ErrorState error={error ?? toAppError(new Error("empty"))} slug={slug} canonical={canonical} />
+          <ErrorState error={error ?? toAppError(new Error("empty"))} />
         ) : (
-          <Dossier result={result} />
+          <ProfileCard profile={result.profile} />
         )}
       </main>
-      <footer className="border-t border-rule">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 text-[12px] text-ink-3 flex flex-wrap justify-between gap-2">
-          <span>Public and licensed data only. The LARP score is a heuristic. Not affiliated with LinkedIn.</span>
-          <Link href={`/profile/${encodeURIComponent(slug)}?refresh=1`} className="hover:text-ink" prefetch={false}>
-            Refresh from sources
-          </Link>
-        </div>
-      </footer>
     </>
-  );
-}
-
-function Dossier({ result }: { result: GetProfileResult }) {
-  const { profile, cache } = result;
-  const apiHref = `/api/profile?url=${encodeURIComponent(profile.slug)}`;
-  let i = 1;
-  return (
-    <div className="grid gap-5 lg:grid-cols-12">
-      <div className="lg:col-span-12 space-y-5">
-        <LarpScoreCard larp={profile.larp} />
-        <DossierHeader profile={profile} cache={cache} />
-      </div>
-      <div className="lg:col-span-8 space-y-5 min-w-0">
-        <About profile={profile} i={i++} />
-        <ExperienceSection profile={profile} i={i++} />
-        <EducationSection profile={profile} i={i++} />
-        <SkillsSection profile={profile} i={i++} />
-        <CertificationsSection profile={profile} i={i++} />
-        <ProjectsSection profile={profile} i={i++} />
-        <PublicationsSection profile={profile} i={i++} />
-        <VolunteerSection profile={profile} i={i++} />
-        <LinksSection profile={profile} i={i++} />
-        <MissingSection profile={profile} i={i++} />
-      </div>
-      <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-20 lg:self-start rise" style={{ "--i": 2 } as React.CSSProperties}>
-        <Ledger profile={profile} />
-        <SourcesPanel profile={profile} apiHref={apiHref} />
-      </aside>
-    </div>
   );
 }
 
@@ -120,49 +64,15 @@ const ERROR_COPY: Record<AppError["code"], { title: string; hint: string }> = {
   INTERNAL: { title: "Something went wrong", hint: "The error has been logged. Try again, or try a different handle." },
 };
 
-function ErrorState({ error, slug, canonical }: { error: AppError; slug: string; canonical: string }) {
+function ErrorState({ error }: { error: AppError }) {
   const copy = ERROR_COPY[error.code];
-  const providers = (error.details?.providers as { provider: string; status: string; note?: string }[] | undefined) ?? [];
   return (
-    <div className="mx-auto max-w-2xl py-10 sm:py-16">
-      <Eyebrow className="mb-3">
-        <a href={canonical} target="_blank" rel="noreferrer" className="hover:text-ink">
-          linkedin.com/in/{slug}
-        </a>
-      </Eyebrow>
-      <div className="flex items-start gap-3">
-        <h1 className="display text-[clamp(1.5rem,3.5vw,2.25rem)] text-ink">{copy.title}</h1>
-        <Badge tone={error.code === "NOT_FOUND" ? "neutral" : error.code === "RATE_LIMITED" ? "mid" : "low"}>{error.code.replace("_", " ")}</Badge>
-      </div>
-      <p className="mt-3 text-[15px] leading-6 text-ink-2">{error.message}</p>
-      <p className="mt-1 text-[14px] leading-6 text-ink-3">{copy.hint}</p>
-      {error.retryAfterSeconds ? <p className="mt-2 data text-ink-3">Retry after {error.retryAfterSeconds}s</p> : null}
-
-      {providers.length > 0 && (
-        <div className="sheet mt-8 p-4">
-          <Eyebrow className="mb-2">What each source said</Eyebrow>
-          <ul className="divide-y divide-rule text-[13px]">
-            {providers.map((p) => (
-              <li key={p.provider} className="py-2 flex items-start justify-between gap-4">
-                <div>
-                  <span className="data text-ink">{p.provider}</span>
-                  {p.note && <div className="text-ink-2 mt-0.5">{p.note}</div>}
-                </div>
-                <Badge tone={p.status === "empty" ? "neutral" : p.status === "skipped" ? "neutral" : "low"}>{p.status}</Badge>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="mt-8 flex flex-wrap gap-4 text-[14px]">
-        <Link href="/" className="text-accent-ink hover:underline">
-          ← Search another profile
-        </Link>
-        <Link href="/profile/demo" className="text-ink-2 hover:text-ink">
-          See the sample profile
-        </Link>
-      </div>
+    <div className="mx-auto max-w-md pt-16 text-center">
+      <h1 className="display text-[2rem] text-ink">{copy.title}</h1>
+      <p className="mt-3 text-[15px] leading-6 text-ink-2">{copy.hint}</p>
+      <Link href="/" className="mt-6 inline-block text-[15px] text-ink hover:underline">
+        Try another profile
+      </Link>
     </div>
   );
 }
