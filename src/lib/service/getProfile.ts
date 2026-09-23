@@ -84,7 +84,7 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
     }
   }
   if (enabled.filter((p) => p.phase === "primary").length === 0) {
-    throw new AppError("NO_PROVIDERS", "No data providers are configured. Add an API key to enable lookups.");
+    throw new AppError("NO_PROVIDERS", "No data providers are configured. Set APIFY_TOKEN to look up LinkedIn profiles.");
   }
 
   const timeoutMs = intFromEnv(env.PROVIDER_TIMEOUT_MS, DEFAULTS.providerTimeoutMs);
@@ -95,14 +95,15 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
     await Promise.all(
       ps.map(async (p) => {
         const started = Date.now();
+        const budget = p.timeoutMs ?? timeoutMs;
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const timer = setTimeout(() => controller.abort(), budget);
         let outcome: ProviderOutcome;
         try {
           outcome = await p.lookup({ slug, canonicalUrl }, { partial, signal: controller.signal });
         } catch (e) {
           const aborted = controller.signal.aborted;
-          outcome = { status: "error", note: aborted ? `Timed out after ${timeoutMs}ms.` : sanitize(e) };
+          outcome = { status: "error", note: aborted ? `Timed out after ${budget}ms.` : sanitize(e) };
         } finally {
           clearTimeout(timer);
         }

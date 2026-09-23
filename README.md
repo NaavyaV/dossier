@@ -6,7 +6,7 @@ Paste a public LinkedIn profile URL → a structured, **sourced** professional p
 
 The product was originally named Dossier; the Worker and repo keep that name so the live URL stays put.
 
-Every field in a dossier carries the provider it came from, when that provider observed it, and a confidence score. Missing fields are listed, not hidden. Only legally obtained data is used: licensed vendor APIs and openly licensed datasets. Nothing logs in, sets cookies, or reads past an auth wall; emails and phone numbers are never collected.
+Every field carries the provider it came from, when that provider observed it, and a confidence score. LinkedIn profile text is fetched through [Apify](https://apify.com/harvestapi/linkedin-profile-scraper) with your account token. Wikidata and GitHub add open data on top. Emails and phone numbers are never collected.
 
 **Live:** https://dossier.devpost67.workers.dev · **Sample:** [/profile/demo](https://dossier.devpost67.workers.dev/profile/demo) · **API:** `GET /api/profile?url=<linkedin url>`
 
@@ -23,7 +23,8 @@ Every field in a dossier carries the provider it came from, when that provider o
 ```
 URL ──▶ parse/validate ──▶ cache? ──▶ rate limit ──▶ providers (parallel, timeout)
                                                           │
-                       primary: PDL · RapidAPI · Wikidata · public page (opt-in) · demo
+                       primary: Apify (LinkedIn) · Wikidata · demo
+
                        enrich:  GitHub (keyed off links discovered above)
                                                           ▼
                                  normalize ──▶ merge/dedupe ──▶ score ──▶ validate ──▶ cache
@@ -38,14 +39,12 @@ URL ──▶ parse/validate ──▶ cache? ──▶ rate limit ──▶ pro
 
 | id | Source | Kind | Enable with |
 |---|---|---|---|
-| `pdl` | [People Data Labs](https://docs.peopledatalabs.com/docs/person-enrichment-api) Person Enrichment | Licensed API | `PDL_API_KEY` |
-| `rapidapi` | LinkedIn-data vendors on RapidAPI (default host: Fresh LinkedIn Profile Data) | Licensed API | `RAPIDAPI_KEY` (+ optional `RAPIDAPI_LINKEDIN_HOST`) |
+| `apify` | [Apify](https://apify.com/harvestapi/linkedin-profile-scraper) LinkedIn profile Actor, no-email mode | Your Apify account | `APIFY_TOKEN` |
 | `wikidata` | Wikidata (P6634 "LinkedIn personal profile ID") + English Wikipedia summary | Open data (CC0 / CC BY-SA) | always on, no key |
 | `github` | GitHub public REST API (enrichment: corroborates name/photo/location, adds top repos as projects) | Public API | always on; `GITHUB_TOKEN` optional for quota |
-| `public-page` | LinkedIn's logged-out public profile page, JSON-LD block only | Public page, **opt-in** | `ENABLE_PUBLIC_PAGE_PROVIDER=true` |
-| `demo-a`, `demo-b` | Synthetic fixtures for the `demo` handle (fictional person) | Fixture | `ENABLE_DEMO_PROVIDER` (default `true`) |
+| `demo-a`, `demo-b`, `demo-larp` | Synthetic fixtures for the `demo` and `larp` handles | Fixture | `ENABLE_DEMO_PROVIDER` (default `true`) |
 
-The public-page provider is off by default: LinkedIn's robots.txt and User Agreement restrict automated access, so turning it on is an operator decision. Licensed APIs are the intended path for non-notable people. Without a vendor key, real lookups succeed only for people with a Wikidata entry that records their LinkedIn ID.
+LinkedIn profile text is fetched only through Apify's API (`POST /v2/acts/{actor}/run-sync-get-dataset-items`), using the token on your Apify account. The default actor is `harvestapi/linkedin-profile-scraper` in "Profile details no email" mode. Override it with `APIFY_LINKEDIN_ACTOR` (`username~actor-name`). Without a token, real lookups succeed only for people Wikidata already links to a LinkedIn ID. Emails and phone numbers are never mapped.
 
 ### Adding a provider
 
@@ -70,11 +69,10 @@ Non-secret vars live in `wrangler.jsonc` → `vars`. Secrets are set with `wrang
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PDL_API_KEY` | – | secret · enables People Data Labs |
-| `RAPIDAPI_KEY` | – | secret · enables the RapidAPI vendor |
-| `RAPIDAPI_LINKEDIN_HOST` | `fresh-linkedin-profile-data.p.rapidapi.com` | swap vendors on the marketplace |
+| `APIFY_TOKEN` | – | secret · runs the LinkedIn Actor. [Apify Console → API & Integrations](https://console.apify.com/settings/integrations) |
+| `APIFY_LINKEDIN_ACTOR` | `harvestapi~linkedin-profile-scraper` | swap the Actor |
+| `APIFY_TIMEOUT_MS` | `55000` | how long to wait for the Actor |
 | `GITHUB_TOKEN` | – | secret · raises GitHub API quota |
-| `ENABLE_PUBLIC_PAGE_PROVIDER` | `false` | opt in to the public-page provider |
 | `ENABLE_DEMO_PROVIDER` | `true` | serve the `/profile/demo` fixture |
 | `CACHE_TTL_SECONDS` | `86400` | profile cache lifetime |
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS` | `30` / `600` | per-IP fixed window |
@@ -98,7 +96,7 @@ npm run preview      # build + run in the real Workers runtime (workerd)
 npx wrangler login
 npx wrangler kv namespace create PROFILE_CACHE   # paste ids into wrangler.jsonc
 npx wrangler kv namespace create RATE_LIMIT
-npx wrangler secret put PDL_API_KEY              # optional
+npx wrangler secret put APIFY_TOKEN
 npm run deploy
 ```
 

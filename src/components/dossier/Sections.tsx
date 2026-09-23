@@ -288,7 +288,7 @@ export function MissingSection({ profile, i }: { profile: Profile; i: number }) 
         ))}
       </ul>
       <p className="mt-3 text-[12px] text-ink-3">
-        The sources consulted for this handle carry no record of these fields. Adding a licensed vendor key usually fills them.
+        The sources consulted for this handle carry no record of these fields. An Apify token usually fills them from the LinkedIn profile.
       </p>
     </section>
   );

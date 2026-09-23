@@ -13,11 +13,11 @@ export type Bindings = {
 };
 
 export type Secrets = {
-  PDL_API_KEY?: string;
-  RAPIDAPI_KEY?: string;
-  RAPIDAPI_LINKEDIN_HOST?: string;
+  APIFY_TOKEN?: string;
+  /** `username~actor-name`. Defaults to harvestapi~linkedin-profile-scraper. */
+  APIFY_LINKEDIN_ACTOR?: string;
+  APIFY_TIMEOUT_MS?: string;
   GITHUB_TOKEN?: string;
-  ENABLE_PUBLIC_PAGE_PROVIDER?: string;
   ENABLE_DEMO_PROVIDER?: string;
   CACHE_TTL_SECONDS?: string;
   RATE_LIMIT_MAX?: string;
@@ -50,11 +50,10 @@ export function getRuntimeEnv(): RuntimeEnv {
   return {
     PROFILE_CACHE: cf.PROFILE_CACHE as KVNamespace | undefined,
     RATE_LIMIT: cf.RATE_LIMIT as KVNamespace | undefined,
-    PDL_API_KEY: pick("PDL_API_KEY"),
-    RAPIDAPI_KEY: pick("RAPIDAPI_KEY"),
-    RAPIDAPI_LINKEDIN_HOST: pick("RAPIDAPI_LINKEDIN_HOST"),
+    APIFY_TOKEN: pick("APIFY_TOKEN"),
+    APIFY_LINKEDIN_ACTOR: pick("APIFY_LINKEDIN_ACTOR"),
+    APIFY_TIMEOUT_MS: pick("APIFY_TIMEOUT_MS"),
     GITHUB_TOKEN: pick("GITHUB_TOKEN"),
-    ENABLE_PUBLIC_PAGE_PROVIDER: pick("ENABLE_PUBLIC_PAGE_PROVIDER"),
     ENABLE_DEMO_PROVIDER: pick("ENABLE_DEMO_PROVIDER"),
     CACHE_TTL_SECONDS: pick("CACHE_TTL_SECONDS"),
     RATE_LIMIT_MAX: pick("RATE_LIMIT_MAX"),

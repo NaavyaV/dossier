@@ -1,24 +1,19 @@
 import type { RuntimeEnv } from "@/lib/infra/env";
 import type { ProfileProvider } from "./types";
-import { createPdlProvider } from "./pdl";
-import { createRapidApiProvider } from "./rapidapi";
+import { createApifyProvider } from "./apify";
 import { createWikidataProvider } from "./wikidata";
 import { createGitHubProvider } from "./github";
-import { createPublicPageProvider } from "./public-page";
 import { createDemoProviders } from "./demo";
 
 /**
- * Provider registry. Order matters only for tie-breaking in the merger
- * (earlier = preferred when confidence is equal). Add or remove sources here.
+ * LinkedIn profile text comes from Apify. Wikidata and GitHub only add
+ * openly licensed corroboration. Order is the tie-break when confidence is equal.
  */
 export function buildProviders(env: RuntimeEnv): ProfileProvider[] {
   return [
-    createPdlProvider(env),
-    createRapidApiProvider(env),
+    createApifyProvider(env),
     createWikidataProvider(env),
-    createPublicPageProvider(env),
     ...createDemoProviders(env),
-    // Enrichment (runs second, keyed off primary results)
     createGitHubProvider(env),
   ];
 }

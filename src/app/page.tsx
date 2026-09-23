@@ -83,9 +83,9 @@ export default function HomePage() {
                 The URL is parsed to a canonical handle. Company pages, legacy <span className="data">/pub/</span> links and anything that isn&apos;t a person are refused up
                 front.
               </Step>
-              <Step n="2" title="Consult sources in parallel">
-                Each configured provider is asked once, with a hard timeout. Results are normalised into a single schema — no
-                provider shape leaks past its adapter.
+              <Step n="2" title="Ask Apify">
+                The LinkedIn profile is fetched by an Apify Actor on your account. Wikidata and GitHub may add an open-data
+                second opinion. Each result is normalised into one schema.
               </Step>
               <Step n="3" title="Resolve duplicates">
                 Roles, schools, skills and links are matched fuzzily across sources (&ldquo;Stripe&rdquo; ≈ &ldquo;Stripe, Inc.&rdquo;) and unioned
@@ -105,8 +105,8 @@ export default function HomePage() {
             <div>
               <Eyebrow className="mb-2">Sources on this deployment</Eyebrow>
               <p className="text-[14px] text-ink-2 max-w-2xl">
-                Only legally obtained data: licensed vendor APIs and openly licensed datasets. Nothing here logs in, sets
-                cookies, or reads past an auth wall. Emails and phone numbers are never collected.
+                LinkedIn text comes from an Apify Actor you run with your own token. Wikidata and GitHub only add public,
+                openly licensed context. Emails and phone numbers are never collected.
               </p>
             </div>
             <Link href="/api/health" className="data text-accent-ink hover:underline whitespace-nowrap">

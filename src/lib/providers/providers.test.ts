@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ProviderProfile } from "@/lib/schema/profile";
-import { mapPdl } from "./pdl";
-import { mapRapid } from "./rapidapi";
-import { extractJsonLd, mapPersonLd } from "./public-page";
+import { apifyDate, mapApify } from "./apify";
 import { splitDateRange, toPartialDate, classifyLink } from "./util";
 
 describe("util", () => {
@@ -29,70 +27,62 @@ describe("util", () => {
   });
 });
 
-describe("PDL mapper", () => {
-  it("maps a representative response and drops contact PII", () => {
-    const p = mapPdl({
-      full_name: "jane doe",
-      job_title: "cto",
-      job_company_name: "acme",
-      location_name: "austin, texas, united states",
-      summary: "Builder.",
-      work_email: "jane@acme.example",
-      mobile_phone: "+1 555 0100",
+describe("Apify mapper", () => {
+  it("parses HarvestAPI month names and Present", () => {
+    expect(apifyDate({ month: "Jan", year: 2024, text: "Jan 2024" })).toEqual({ year: 2024, month: 1 });
+    expect(apifyDate({ text: "Present" })).toBeUndefined();
+  });
+
+  it("maps a profile and drops contact fields", () => {
+    const p = mapApify({
+      firstName: "Towhid",
+      lastName: "Rahman",
+      headline: "Pharmacology",
+      about: "Eight years in.",
+      photo: "https://media.example/t.jpg",
+      email: "towhid@example.com",
+      mobileNumber: "+1 555 0100",
+      location: { linkedinText: "Los Angeles, California, United States" },
+      linkedinUrl: "https://www.linkedin.com/in/towhid-rahman",
+      currentPosition: [{ companyName: "CVS Health" }],
       experience: [
-        { company: { name: "Acme", website: "acme.example" }, title: { name: "CTO" }, start_date: "2021-02", is_primary: true },
-        { company: { name: "Globex" }, title: { name: "Engineer" }, start_date: "2016", end_date: "2021-01" },
+        {
+          position: "Staff Pharmacist",
+          companyName: "CVS Health",
+          companyLinkedinUrl: "https://www.linkedin.com/company/cvshealth/",
+          employmentType: "Full-time",
+          location: "Thousand Oaks",
+          startDate: { month: "Jan", year: 2024, text: "Jan 2024" },
+          endDate: { text: "Present" },
+          description: "Exceeded targets by 15%.",
+        },
       ],
-      education: [{ school: { name: "MIT" }, degrees: ["bachelors"], majors: ["computer science"], end_date: "2015" }],
-      skills: ["rust", "leadership"],
-      certifications: [{ name: "CKA", organization: "CNCF", start_date: "2022-05" }],
-      profiles: [{ network: "github", url: "github.com/janedoe", username: "janedoe" }],
+      education: [
+        {
+          schoolName: "Khulna University",
+          degree: "Bachelor of Science",
+          fieldOfStudy: "Biotechnology",
+          startDate: { month: "Aug", year: 2001 },
+          endDate: { month: "May", year: 2005 },
+        },
+      ],
+      skills: [{ name: "Medication Safety", endorsements: "1 endorsement" }],
+      certifications: [{ title: "Excel Essential Training", issuedBy: "LinkedIn", issuedAt: "Issued Sep 2023" }],
+      projects: [{ title: "CVD medicines", description: "A study.", startDate: { month: "Jan", year: 2022 }, endDate: { month: "May", year: 2022 } }],
+      volunteering: [{ role: "Immunizer", organizationName: "CSHP", cause: "Health" }],
+      publications: [{ title: "Evidence-Based CVD", publishedAt: "Sep 5, 2023", link: "https://example.org/paper" }],
     });
     expect(ProviderProfile.parse(p)).toBeTruthy();
-    expect(p.fullName).toBe("jane doe");
-    expect(p.experience).toHaveLength(2);
-    expect(p.experience?.[0]).toMatchObject({ company: "Acme", title: "CTO", current: true, companyUrl: "https://acme.example/" });
-    expect(p.education?.[0]).toMatchObject({ school: "MIT", degree: "bachelors", field: "computer science", end: { year: 2015 } });
-    expect(p.certifications?.[0]).toMatchObject({ name: "CKA", issuer: "CNCF", issued: { year: 2022, month: 5 } });
-    expect(p.links?.[0]).toMatchObject({ network: "github", handle: "janedoe" });
-    expect(JSON.stringify(p)).not.toMatch(/acme\.example"|555 0100|work_email/);
-  });
-});
-
-describe("RapidAPI mapper", () => {
-  it("tolerates alternate key names and date ranges", () => {
-    const p = mapRapid({
-      full_name: "Sam Lee",
-      headline: "Designer",
-      city: "Berlin",
-      country: "Germany",
-      profile_image_url: "https://img.example/s.jpg",
-      experiences: [{ company: "Studio", title: "Lead", date_range: "Jan 2020 - Present", location: "Berlin" }],
-      educations: [{ school: "UdK", degree: "MA", field_of_study: "Design", date_range: "2014 - 2016" }],
-      skills: "Figma | Motion",
-      volunteers: [{ company: "Red Cross", title: "Volunteer", date_range: "2018 - 2019" }],
-      publications: [{ title: "On Grids", publisher: "A List Apart", date: "2021-06", link: "https://alistapart.example/grids" }],
-    });
-    expect(ProviderProfile.parse(p)).toBeTruthy();
-    expect(p.location).toBe("Berlin, Germany");
-    expect(p.experience?.[0]).toMatchObject({ company: "Studio", title: "Lead", current: true, start: { year: 2020, month: 1 } });
-    expect(p.education?.[0]).toMatchObject({ school: "UdK", start: { year: 2014 }, end: { year: 2016 } });
-    expect(p.skills?.map((s) => s.name)).toEqual(["Figma", "Motion"]);
-    expect(p.volunteer?.[0]).toMatchObject({ organization: "Red Cross", role: "Volunteer" });
-    expect(p.publications?.[0]).toMatchObject({ title: "On Grids", published: { year: 2021, month: 6 } });
-  });
-});
-
-describe("public page JSON-LD", () => {
-  it("extracts and maps a Person block", () => {
-    const html = `<html><head><script type="application/ld+json">{"@context":"http://schema.org","@graph":[{"@type":"Person","name":"Ada Example","jobTitle":"Engineer","url":"https://www.linkedin.com/in/ada","image":{"contentUrl":"https://media.example/a.jpg"},"address":{"addressLocality":"London","addressCountry":"GB"},"worksFor":[{"name":"Lovelace Ltd","member":{"startDate":"2020-01"}}],"alumniOf":[{"name":"Cambridge","member":{"startDate":"2010","endDate":"2013"}}],"sameAs":["https://github.com/ada"]}]}</script></head></html>`;
-    const person = extractJsonLd(html).find((o) => o["@type"] === "Person")!;
-    const p = mapPersonLd(person);
-    expect(ProviderProfile.parse(p)).toBeTruthy();
-    expect(p.fullName).toBe("Ada Example");
-    expect(p.location).toBe("London, GB");
-    expect(p.experience?.[0]).toMatchObject({ company: "Lovelace Ltd", current: true });
-    expect(p.education?.[0]).toMatchObject({ school: "Cambridge", end: { year: 2013 } });
-    expect(p.links?.map((l) => l.network)).toEqual(["linkedin", "github"]);
+    expect(p.fullName).toBe("Towhid Rahman");
+    expect(p.location).toBe("Los Angeles, California, United States");
+    expect(p.currentCompany).toBe("CVS Health");
+    expect(p.experience?.[0]).toMatchObject({ title: "Staff Pharmacist", company: "CVS Health", current: true, start: { year: 2024, month: 1 } });
+    expect(p.education?.[0]).toMatchObject({ school: "Khulna University", field: "Biotechnology", end: { year: 2005, month: 5 } });
+    expect(p.skills?.[0]).toMatchObject({ name: "Medication Safety", endorsements: 1 });
+    expect(p.certifications?.[0]).toMatchObject({ name: "Excel Essential Training", issuer: "LinkedIn" });
+    expect(p.projects?.[0]).toMatchObject({ name: "CVD medicines", end: { year: 2022, month: 5 } });
+    expect(p.volunteer?.[0]).toMatchObject({ role: "Immunizer", organization: "CSHP" });
+    expect(p.publications?.[0]?.url).toBe("https://example.org/paper");
+    expect(JSON.stringify(p)).not.toMatch(/555 0100|towhid@example/);
   });
 });

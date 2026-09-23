@@ -39,6 +39,8 @@ export interface ProfileProvider {
   readonly baseConfidence: number;
   /** License / origin statement shown to users. */
   readonly license: string;
+  /** Wall-clock budget for this provider. Apify actor runs need much longer than a Wikidata query. */
+  readonly timeoutMs?: number;
   /** Whether this provider is configured to run in the current environment. */
   isEnabled(env: RuntimeEnv): boolean;
   /** Short reason for `isEnabled() === false`, shown in the provider table. */
