@@ -88,9 +88,27 @@ describe("scoreLarp", () => {
       }),
       NOW,
     );
+    const likeSiddharth = scoreLarp(
+      profile({
+        headline: { value: "Computer Science student at The University of Texas at Dallas", sources: [src()], confidence: 0.8 },
+        skills: Array.from({ length: 19 }, (_, i) => ({ id: `sk-${i}`, name: `Skill ${i}`, sources: [src()], confidence: 0.5 })),
+        experience: Array.from({ length: 6 }, (_, i) => ({
+          id: `exp-${i}`,
+          title: "Developer",
+          company: `Co ${i}`,
+          start: { year: 2020 },
+          end: { year: 2021 },
+          sources: [src()],
+          confidence: 0.8,
+        })),
+      }),
+      NOW,
+    );
+    expect(likeSiddharth.percent).toBe(45);
+
     expect(wordy.percent).toBeGreaterThan(one.percent);
-    expect(career.percent).toBeGreaterThanOrEqual(75);
-    expect(career.verdict).toBe("full-larp");
+    expect(career.percent).toBeGreaterThan(one.percent);
+    expect(career.percent).toBeLessThan(50);
   });
 
   it("scores theater titles, buzzwords and stacked roles as full larp", () => {

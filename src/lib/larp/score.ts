@@ -112,9 +112,10 @@ export function scoreLarp(profile: Input, _now = new Date()): LarpScore {
     if (points !== 0) signals.push({ id, label, detail, points });
   };
 
-  // A short profile stays low. Keywords and a long job list climb fast.
-  let total = 10;
-  signals.push({ id: "base", label: "Baseline", detail: "Everyone starts here.", points: 10 });
+  // Tuned so a 6-role, ~20-skill student profile lands near 45.
+  // Keywords are what push that into the high bands.
+  let total = 9;
+  signals.push({ id: "base", label: "Baseline", detail: "Everyone starts here.", points: 9 });
 
   const corpus = [headline, about, title, ...profile.experience.flatMap((e) => [e.title ?? "", e.description ?? ""])].join("\n");
   const hits = keywordHits(corpus);
@@ -122,7 +123,7 @@ export function scoreLarp(profile: Input, _now = new Date()): LarpScore {
     "keywords",
     "Keywords",
     hits.length ? `${hits.length} mention${hits.length === 1 ? "" : "s"} · ${[...new Set(hits)].slice(0, 6).join(", ")}` : "",
-    Math.min(60, hits.length * 8),
+    Math.min(55, hits.length * 8),
   );
 
   const pipes = (headline.match(/[|•·/]/g) ?? []).length;
@@ -143,10 +144,10 @@ export function scoreLarp(profile: Input, _now = new Date()): LarpScore {
   push("chief-stack", "Chief / founder stack", `${chiefs} chief or founder title${chiefs === 1 ? "" : "s"}`, chiefs >= 3 ? 12 : chiefs === 2 ? 6 : 0);
 
   const roles = profile.experience.length;
-  push("experience", "Experience", `${roles} role${roles === 1 ? "" : "s"}`, roles * 14);
+  push("experience", "Experience", `${roles} role${roles === 1 ? "" : "s"}`, roles * 4);
 
   const skillCount = profile.skills.length;
-  push("skills", "Skills", `${skillCount} listed`, Math.min(24, skillCount * 2));
+  push("skills", "Skills", `${skillCount} listed`, Math.min(12, skillCount));
 
   const bangs = (headline.match(/!/g) ?? []).length + (about.match(/!/g) ?? []).length;
   push("bangs", "Exclamation marks", `${bangs} in the headline and about`, Math.min(9, bangs * 3));
