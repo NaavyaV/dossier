@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dossier",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "PROFILE_CACHE",
+      "id": "85db57f791a34403af6d73d4da165793"
+    },
+    {
+      "binding": "RATE_LIMIT",
+      "id": "edfa9f1e71d849dcb50e5fdf916dca0e"
+    }
+  ],
+  "vars": {
+    // Non-secret configuration. Secrets (PDL_API_KEY, RAPIDAPI_KEY, GITHUB_TOKEN)
+    // are set with `wrangler secret put <NAME>`.
+    "CACHE_TTL_SECONDS": "86400",
+    "RATE_LIMIT_MAX": "30",
+    "RATE_LIMIT_WINDOW_SECONDS": "600",
+    "PROVIDER_TIMEOUT_MS": "9000",
+    "ENABLE_DEMO_PROVIDER": "true",
+    "ENABLE_PUBLIC_PAGE_PROVIDER": "false"
+  }
+}
