@@ -59,10 +59,38 @@ describe("scoreLarp", () => {
     expect(Number.isInteger(s.percent)).toBe(true);
   });
 
-  it("scores a specific, long-tenure profile as grounded", () => {
+  it("keeps a single plain role low", () => {
     const s = scoreLarp(profile(), NOW);
     expect(s.verdict).toBe("grounded");
     expect(s.percent).toBeLessThan(25);
+  });
+
+  it("raises the score as keywords and roles pile up", () => {
+    const one = scoreLarp(profile(), NOW);
+    const wordy = scoreLarp(
+      profile({
+        headline: { value: "Passionate visionary leader", sources: [src()], confidence: 0.8 },
+        about: { value: "Synergy, hustle, and a personal brand.", sources: [src()], confidence: 0.8 },
+      }),
+      NOW,
+    );
+    const career = scoreLarp(
+      profile({
+        experience: ["A", "B", "C", "D", "E"].map((company, i) => ({
+          id: `exp-${i}`,
+          title: "Engineer",
+          company,
+          start: { year: 2010 + i },
+          end: { year: 2012 + i },
+          sources: [src()],
+          confidence: 0.8,
+        })),
+      }),
+      NOW,
+    );
+    expect(wordy.percent).toBeGreaterThan(one.percent);
+    expect(career.percent).toBeGreaterThanOrEqual(75);
+    expect(career.verdict).toBe("full-larp");
   });
 
   it("scores theater titles, buzzwords and stacked roles as full larp", () => {
@@ -97,7 +125,7 @@ describe("scoreLarp", () => {
     );
     expect(s.percent).toBeGreaterThanOrEqual(75);
     expect(s.verdict).toBe("full-larp");
-    expect(s.signals.some((x) => x.id === "headline-buzz" && x.points > 0)).toBe(true);
+    expect(s.signals.some((x) => x.id === "keywords" && x.points > 0)).toBe(true);
     expect(s.signals.some((x) => x.id === "theater-title")).toBe(true);
   });
 });
