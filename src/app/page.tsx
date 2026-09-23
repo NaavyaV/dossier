@@ -27,7 +27,7 @@ export default function HomePage() {
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-8 items-start">
             <div className="lg:col-span-7">
               <Eyebrow className="mb-4">Public LinkedIn URL → structured, sourced profile</Eyebrow>
-              <h1 className="display text-[clamp(2.4rem,6vw,4.25rem)] text-ink">
+              <h1 className="display text-[clamp(2.4rem,5.2vw,3.75rem)] text-ink">
                 One link in.
                 <br />
                 A sourced dossier out.

@@ -26,7 +26,7 @@ export default function Loading() {
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-4 lg:border-l lg:border-rule lg:pl-6 grid grid-cols-3 lg:grid-cols-1 gap-4">
+              <div className="lg:col-span-4 lg:border-l lg:border-rule lg:pl-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
                 <div className="skeleton h-12" />
                 <div className="skeleton h-12" />
                 <div className="skeleton h-12" />

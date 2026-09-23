@@ -69,7 +69,7 @@ export function DossierHeader({ profile, cache }: { profile: Profile; cache: Pro
         </div>
 
         {/* Readout */}
-        <div className="lg:col-span-4 lg:border-l lg:border-rule lg:pl-6 grid grid-cols-3 lg:grid-cols-1 gap-4 content-start">
+        <div className="lg:col-span-4 lg:border-l lg:border-rule lg:pl-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 content-start">
           <Stat label="Coverage">
             <div className="flex items-baseline gap-1.5">
               <span className="display text-[26px] text-ink tabular-nums">{profile.coverage.populated}</span>
@@ -78,7 +78,7 @@ export function DossierHeader({ profile, cache }: { profile: Profile; cache: Pro
             <CoverageStrip profile={profile} />
           </Stat>
           <Stat label="Confidence">
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
               <span className="display text-[26px] text-ink tabular-nums">{profile.confidence.toFixed(2)}</span>
               <ConfidenceMeter value={profile.confidence} label={false} size="md" />
             </div>
