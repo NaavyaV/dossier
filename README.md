@@ -1,6 +1,10 @@
-# Dossier
+# LARP detector
 
-Paste a public LinkedIn profile URL → get a structured, **sourced** professional profile.
+is it real or is it larp?
+
+Paste a public LinkedIn profile URL → a structured, **sourced** professional profile and a **0–100% LARP score**. The score is an arbitrary heuristic over the public text (buzzwords, theater titles, stacked roles, versus specifics and tenure). It is not a lie detector.
+
+The product was originally named Dossier; the Worker and repo keep that name so the live URL stays put.
 
 Every field in a dossier carries the provider it came from, when that provider observed it, and a confidence score. Missing fields are listed, not hidden. Only legally obtained data is used: licensed vendor APIs and openly licensed datasets. Nothing logs in, sets cookies, or reads past an auth wall; emails and phone numbers are never collected.
 

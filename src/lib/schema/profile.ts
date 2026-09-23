@@ -249,6 +249,22 @@ export const ProviderRun = z.object({
 });
 export type ProviderRun = z.infer<typeof ProviderRun>;
 
+export const LarpSignal = z.object({
+  id: z.string(),
+  label: z.string(),
+  detail: z.string(),
+  points: z.number(),
+});
+export type LarpSignal = z.infer<typeof LarpSignal>;
+
+export const LarpScore = z.object({
+  percent: z.number().int().min(0).max(100),
+  verdict: z.enum(["grounded", "polished", "inflated", "full-larp"]),
+  line: z.string(),
+  signals: z.array(LarpSignal),
+});
+export type LarpScore = z.infer<typeof LarpScore>;
+
 export const Profile = z.object({
   schemaVersion: z.literal(1),
   slug: z.string(),
@@ -284,6 +300,8 @@ export const Profile = z.object({
   providers: z.array(ProviderRun),
   /** When the merge was produced. */
   generatedAt: z.string(),
+  /** Exaggeration heuristic, 0 = reads real, 100 = full LARP. Arbitrary and disclosed. */
+  larp: LarpScore,
 });
 export type Profile = z.infer<typeof Profile>;
 

@@ -9,6 +9,7 @@ import type { LookupContext, LookupInput, ProfileProvider, ProviderOutcome } fro
  */
 
 export const DEMO_SLUG = "demo";
+export const LARP_SLUG = "larp";
 
 const primary: ProviderProfile = {
   fullName: "Priya Raman",
@@ -160,6 +161,30 @@ const secondary: ProviderProfile = {
   ],
 };
 
+const larp: ProviderProfile = {
+  fullName: "Chad Synergy",
+  headline: "Visionary Founder | 10x Thought Leader | Serial Entrepreneur | Disrupting the Ecosystem 🚀",
+  location: "Everywhere",
+  currentTitle: "Visionary Founder",
+  currentCompany: "SynergyOS",
+  about:
+    "Passionate about changing the world. Award-winning guru, ninja, and rockstar. On a mission to unlock synergy across the ecosystem. Excited to announce my personal brand. Humbled and grateful!!!",
+  experience: [
+    { title: "Founder & CEO", company: "SynergyOS", start: { year: 2025, month: 1 }, current: true, description: "Changing the world." },
+    { title: "Chief Visionary Officer", company: "HustleDAO", start: { year: 2024, month: 6 }, current: true },
+    { title: "Co-Founder", company: "GrowthHack Labs", start: { year: 2024, month: 2 }, current: true },
+    { title: "Founder", company: "Personal Brand Inc", start: { year: 2023, month: 9 }, current: true },
+  ],
+  skills: [
+    "Thought Leadership", "Synergy", "Disruption", "Personal Branding", "Growth Hacking", "Vision",
+    "Hustle", "Networking", "Storytelling", "AI", "Web3", "Community", "Mindset", "Scaling",
+    "Fundraising", "Pitching", "Content", "Influence", "Strategy", "Innovation", "Leadership",
+    "Culture", "OKRs", "Virality", "Funnels", "Branding", "Speaking", "Podcasting", "Newsletters",
+    "Advisory", "Mentorship", "Angel Investing",
+  ].map((name) => ({ name })),
+  links: [{ network: "linkedin", url: "https://www.linkedin.com/in/larp" }, { network: "website", url: "https://synergyos.example" }],
+};
+
 function make(
   id: string,
   label: string,
@@ -167,6 +192,7 @@ function make(
   baseConfidence: number,
   observedAt: string,
   env: RuntimeEnv,
+  slug: string,
 ): ProfileProvider {
   const enabled = boolFromEnv(env.ENABLE_DEMO_PROVIDER, true);
   return {
@@ -179,7 +205,7 @@ function make(
     disabledReason: () => "ENABLE_DEMO_PROVIDER=false",
     async lookup(input: LookupInput, _ctx: LookupContext): Promise<ProviderOutcome> {
       const meta = { provider: id, label, observedAt, baseConfidence, license: "Synthetic fixture — fictional person", synthetic: true };
-      if (input.slug !== DEMO_SLUG) return { status: "skipped", note: "Only answers the demo handle." };
+      if (input.slug !== slug) return { status: "skipped", note: `Only answers the ${slug} handle.` };
       return { status: "ok", profile: fixture, meta };
     },
   };
@@ -188,7 +214,8 @@ function make(
 export function createDemoProviders(env: RuntimeEnv): ProfileProvider[] {
   const now = Date.now();
   return [
-    make("demo-a", "Demo fixture A", primary, 0.9, new Date(now - 2 * 86_400_000).toISOString(), env),
-    make("demo-b", "Demo fixture B (stale)", secondary, 0.7, new Date(now - 400 * 86_400_000).toISOString(), env),
+    make("demo-a", "Demo fixture A", primary, 0.9, new Date(now - 2 * 86_400_000).toISOString(), env, DEMO_SLUG),
+    make("demo-b", "Demo fixture B (stale)", secondary, 0.7, new Date(now - 400 * 86_400_000).toISOString(), env, DEMO_SLUG),
+    make("demo-larp", "Demo fixture (full LARP)", larp, 0.9, new Date(now - 86_400_000).toISOString(), env, LARP_SLUG),
   ];
 }

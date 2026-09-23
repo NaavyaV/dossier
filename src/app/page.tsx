@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { SearchForm } from "@/components/SearchForm";
-import { Badge, Eyebrow, SourceChip, TopBar } from "@/components/ui";
+import { Badge, Eyebrow, TopBar } from "@/components/ui";
 import { getRuntimeEnv } from "@/lib/infra/env";
 import { buildProviders } from "@/lib/providers/registry";
-import type { Provenance } from "@/lib/schema/profile";
 
 export const dynamic = "force-dynamic";
 
 const EXAMPLES = [
-  { slug: "demo", label: "Sample dossier", note: "fictional person, all fields" },
+  { slug: "demo", label: "demo", note: "grounded sample" },
+  { slug: "larp", label: "larp", note: "full costume" },
   { slug: "satyanadella", label: "satyanadella", note: "open data" },
   { slug: "williamhgates", label: "williamhgates", note: "open data" },
 ];
@@ -16,7 +16,6 @@ const EXAMPLES = [
 export default function HomePage() {
   const env = getRuntimeEnv();
   const providers = buildProviders(env);
-  const specimen = specimenSources();
 
   return (
     <>
@@ -26,16 +25,15 @@ export default function HomePage() {
         <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-16 pb-14 sm:pt-24 sm:pb-20">
           <div className="grid gap-10 lg:grid-cols-12 lg:gap-8 items-start">
             <div className="lg:col-span-7">
-              <Eyebrow className="mb-4">Public LinkedIn URL → structured, sourced profile</Eyebrow>
-              <h1 className="display text-[clamp(2.4rem,5.2vw,3.75rem)] text-ink">
-                One link in.
+              <Eyebrow className="mb-4">LARP detector</Eyebrow>
+              <h1 className="display text-[clamp(2.6rem,5.4vw,4.25rem)] text-ink">
+                is it real
                 <br />
-                A sourced dossier out.
+                or is it larp?
               </h1>
               <p className="mt-5 max-w-xl text-[17px] leading-7 text-ink-2">
-                Paste a public profile URL. Dossier assembles a structured professional profile from licensed APIs and open
-                datasets, resolves duplicates across sources, and labels every field with where it came from and how fresh it
-                is.
+                Paste a public LinkedIn URL. You get the profile, sourced, and a score from 0% to 100% for how staged the
+                public text reads. Buzzwords and theater titles push it up. Specifics pull it down.
               </p>
               <div className="mt-8 max-w-2xl">
                 <SearchForm size="lg" autoFocus />
@@ -51,33 +49,26 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Specimen: teaches the provenance vocabulary before the user sees a dossier */}
             <aside className="lg:col-span-5 lg:pl-6">
-              <div className="sheet p-5">
-                <Eyebrow className="mb-3">Every field reads like this</Eyebrow>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-[11px] text-ink-3 mb-1">Current role</div>
-                    <div className="text-[15px] font-medium text-ink">Staff Engineer · Meridian</div>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {specimen.map((s) => (
-                        <SourceChip key={s.provider} source={s} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="hairline-t pt-4">
-                    <div className="text-[11px] text-ink-3 mb-1">Certifications</div>
-                    <div className="flex items-center gap-2 text-[14px] text-ink-3">
-                      <span className="inline-block size-2 rounded-full border border-rule-2" aria-hidden />
-                      Not found in any consulted source
-                    </div>
-                  </div>
-                  <div className="hairline-t pt-4 grid grid-cols-3 gap-3">
-                    <Legend dot="bg-ok" text="Fresh · ≤ 90 days" />
-                    <Legend dot="bg-mid" text="Aging · ≤ 1 year" />
-                    <Legend dot="bg-low" text="Stale · > 1 year" />
-                  </div>
+              <div className="sheet p-5 sm:p-6">
+                <Eyebrow className="mb-1">What a score looks like</Eyebrow>
+                <div className="mt-2 flex items-end gap-3">
+                  <p className="display text-[5rem] leading-none text-low tabular-nums">
+                    86<span className="text-[0.42em]">%</span>
+                  </p>
+                  <p className="mb-3 text-[15px] font-semibold text-low">Full LARP</p>
                 </div>
+                <div className="mt-1 h-3 rounded-full bg-paper-2" aria-hidden>
+                  <div className="h-full w-[86%] rounded-full bg-low" />
+                </div>
+                <ul className="mt-4 space-y-1.5 text-[13px] text-ink-2">
+                  <li className="flex justify-between gap-3"><span>Headline buzzwords</span><span className="data text-low">+20</span></li>
+                  <li className="flex justify-between gap-3"><span>Three founder titles at once</span><span className="data text-low">+14</span></li>
+                  <li className="flex justify-between gap-3"><span>Eight years in one role</span><span className="data text-ok">−10</span></li>
+                </ul>
+                <p className="mt-4 text-[12px] leading-5 text-ink-3">
+                  Illustrative. A real score is computed from the profile, and every field still carries its source, when it was observed, and how sure.
+                </p>
               </div>
             </aside>
           </div>
@@ -86,7 +77,7 @@ export default function HomePage() {
         {/* How it's assembled — a real pipeline, so the sequence numbering carries meaning */}
         <section id="how" className="border-y border-rule bg-sheet">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 py-14">
-            <Eyebrow className="mb-6">How a dossier is assembled</Eyebrow>
+            <Eyebrow className="mb-6">How a score is assembled</Eyebrow>
             <ol className="grid gap-8 md:grid-cols-4">
               <Step n="1" title="Validate">
                 The URL is parsed to a canonical handle. Company pages, legacy <span className="data">/pub/</span> links and anything that isn&apos;t a person are refused up
@@ -157,7 +148,7 @@ export default function HomePage() {
 
       <footer className="border-t border-rule">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row gap-3 sm:items-center justify-between text-[12px] text-ink-3">
-          <p>Dossier reads public and licensed data only. It is not affiliated with LinkedIn.</p>
+          <p>Public and licensed data only. The score is a heuristic, not a verdict on the person. Not affiliated with LinkedIn.</p>
           <p className="data">
             GET /api/profile?url=&lt;linkedin url&gt;
           </p>
@@ -165,15 +156,6 @@ export default function HomePage() {
       </footer>
     </>
   );
-}
-
-/** Illustrative provenance for the hero specimen; computed per request, outside render. */
-function specimenSources(): Provenance[] {
-  const now = Date.now();
-  return [
-    { provider: "a", label: "People Data Labs", observedAt: new Date(now).toISOString(), confidence: 0.9, license: "Licensed" },
-    { provider: "b", label: "Wikidata", observedAt: new Date(now - 200 * 86_400_000).toISOString(), confidence: 0.72, license: "CC0" },
-  ];
 }
 
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
@@ -188,11 +170,3 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
   );
 }
 
-function Legend({ dot, text }: { dot: string; text: string }) {
-  return (
-    <div className="flex items-center gap-1.5 text-[11px] text-ink-2">
-      <span className={`inline-block size-1.5 rounded-full ${dot}`} aria-hidden />
-      {text}
-    </div>
-  );
-}

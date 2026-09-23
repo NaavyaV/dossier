@@ -198,10 +198,12 @@ function sameSkill(a: string, b: string): boolean {
 // Entry point
 // ---------------------------------------------------------------------------
 
+export type MergedProfile = Omit<Profile, "larp">;
+
 export function mergeProfiles(
   inputs: MergeInput[],
   ctx: { slug: string; linkedinUrl: string; runs: ProviderRun[]; now?: number },
-): Profile {
+): MergedProfile {
   const now = ctx.now ?? Date.now();
   const tagged = inputs.map((inp, order) => ({ ...inp, prov: provenance(inp.meta, now), order }));
 

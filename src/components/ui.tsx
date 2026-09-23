@@ -8,9 +8,9 @@ import { confidenceSignal, fmtDateTime, freshnessSignal, relativeTime, type Sign
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <Link href="/" className={`inline-flex items-baseline gap-2 no-underline ${className}`} aria-label="Dossier home">
-      <span className="display-condensed text-[22px] text-ink">DOSSIER</span>
-      <span className="data text-ink-3 hidden sm:inline">v0.1</span>
+    <Link href="/" className={`inline-flex items-baseline gap-2.5 no-underline ${className}`} aria-label="LARP detector home">
+      <span className="display-condensed text-[22px] text-ink">LARP</span>
+      <span className="hidden text-[13px] text-ink-3 lg:inline">is it real or is it larp?</span>
     </Link>
   );
 }

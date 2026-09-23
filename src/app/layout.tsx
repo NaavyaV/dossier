@@ -23,10 +23,10 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Dossier — sourced professional profiles", template: "%s · Dossier" },
+  title: { default: "LARP detector — is it real or is it larp?", template: "%s · LARP detector" },
   description:
-    "Paste a public LinkedIn profile URL and get a structured professional profile assembled from licensed APIs and open datasets, with the source and freshness of every field.",
-  applicationName: "Dossier",
+    "Paste a public LinkedIn profile URL. Get a sourced professional profile and a 0–100% LARP score for how staged the public text reads.",
+  applicationName: "LARP detector",
   robots: { index: true, follow: true },
 };
 

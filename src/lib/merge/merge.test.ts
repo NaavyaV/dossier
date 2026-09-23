@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProviderMeta, ProviderProfile } from "@/lib/schema/profile";
+import { scoreLarp } from "@/lib/larp/score";
 import { Profile } from "@/lib/schema/profile";
 import { combine, freshnessFactor, mergeProfiles } from "./merge";
 
@@ -49,8 +50,8 @@ describe("mergeProfiles", () => {
   };
 
   it("produces a schema-valid profile", () => {
-    const p = mergeProfiles([{ profile: a, meta: meta("a", 0.9) }, { profile: b, meta: meta("b", 0.7, 400) }], ctx);
-    expect(() => Profile.parse(p)).not.toThrow();
+    const merged = mergeProfiles([{ profile: a, meta: meta("a", 0.9) }, { profile: b, meta: meta("b", 0.7, 400) }], ctx);
+    expect(() => Profile.parse({ ...merged, larp: scoreLarp(merged) })).not.toThrow();
   });
 
   it("corroborates agreeing scalars and records conflicts", () => {

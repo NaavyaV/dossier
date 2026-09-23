@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { SearchForm } from "@/components/SearchForm";
 import { DossierHeader } from "@/components/dossier/Header";
+import { LarpScoreCard } from "@/components/dossier/LarpScore";
 import { Ledger, SourcesPanel } from "@/components/dossier/Ledger";
 import {
   About,
@@ -69,7 +70,7 @@ export default async function ProfilePage({
       </main>
       <footer className="border-t border-rule">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 text-[12px] text-ink-3 flex flex-wrap justify-between gap-2">
-          <span>Public and licensed data only. Not affiliated with LinkedIn.</span>
+          <span>Public and licensed data only. The LARP score is a heuristic. Not affiliated with LinkedIn.</span>
           <Link href={`/profile/${encodeURIComponent(slug)}?refresh=1`} className="hover:text-ink" prefetch={false}>
             Refresh from sources
           </Link>
@@ -85,7 +86,8 @@ function Dossier({ result }: { result: GetProfileResult }) {
   let i = 1;
   return (
     <div className="grid gap-5 lg:grid-cols-12">
-      <div className="lg:col-span-12">
+      <div className="lg:col-span-12 space-y-5">
+        <LarpScoreCard larp={profile.larp} />
         <DossierHeader profile={profile} cache={cache} />
       </div>
       <div className="lg:col-span-8 space-y-5 min-w-0">
@@ -158,7 +160,7 @@ function ErrorState({ error, slug, canonical }: { error: AppError; slug: string;
           ← Search another profile
         </Link>
         <Link href="/profile/demo" className="text-ink-2 hover:text-ink">
-          See the sample dossier
+          See the sample profile
         </Link>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { CACHE_KEYS, createCache } from "@/lib/infra/cache";
 import { getRuntimeEnv, intFromEnv } from "@/lib/infra/env";
 import { clientIdentity, createRateLimiter, type RateLimitDecision } from "@/lib/infra/ratelimit";
 import { parseLinkedInUrl } from "@/lib/linkedin/url";
+import { scoreLarp } from "@/lib/larp/score";
 import { mergeProfiles, type MergeInput } from "@/lib/merge/merge";
 import { buildProviders } from "@/lib/providers/registry";
 import type { ProfileProvider, ProviderOutcome } from "@/lib/providers/types";
@@ -158,7 +159,8 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
     });
   }
 
-  const profile = mergeProfiles(merged, { slug, linkedinUrl: canonicalUrl, runs: sortRuns(runs) });
+  const mergedProfile = mergeProfiles(merged, { slug, linkedinUrl: canonicalUrl, runs: sortRuns(runs) });
+  const profile = { ...mergedProfile, larp: scoreLarp(mergedProfile) };
   const validated = Profile.parse(profile);
   await cache.set(CACHE_KEYS.profile(slug), validated, ttl);
 

@@ -10,7 +10,7 @@ export default function Loading() {
           <SearchForm size="sm" />
         </div>
       </TopBar>
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8" aria-busy="true" aria-label="Assembling dossier">
+      <main className="flex-1 mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8" aria-busy="true" aria-label="Scoring profile">
         <div className="grid gap-5 lg:grid-cols-12">
           <div className="lg:col-span-12 sheet p-5 sm:p-6">
             <div className="grid gap-6 lg:grid-cols-12">

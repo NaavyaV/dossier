@@ -15,7 +15,7 @@ export function DossierHeader({ profile, cache }: { profile: Profile; cache: Pro
     <section className="sheet rise p-5 sm:p-6" style={{ "--i": 0 } as React.CSSProperties}>
       {profile.synthetic && (
         <div className="mb-4 -mt-1 flex items-center gap-2 rounded-md bg-mid-soft px-3 py-2 text-[13px] text-mid">
-          <span className="font-medium">Sample data.</span> This dossier describes a fictional person and exists to show the interface.
+          <span className="font-medium">Sample data.</span> Fictional person, here so you can see the score and the layout.
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-12">

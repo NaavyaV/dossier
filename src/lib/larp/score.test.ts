@@ -1,0 +1,103 @@
+import { describe, expect, it } from "vitest";
+import type { Profile } from "@/lib/schema/profile";
+import { scoreLarp, verdictFor } from "./score";
+
+const NOW = new Date("2026-09-23T00:00:00Z");
+
+function profile(over: Partial<Profile> = {}): Profile {
+  return {
+    schemaVersion: 1,
+    slug: "x",
+    linkedinUrl: "https://www.linkedin.com/in/x",
+    fullName: { value: "Ada", sources: [src()], confidence: 0.8 },
+    photoUrl: null,
+    headline: { value: "Engineer at Acme", sources: [src()], confidence: 0.8 },
+    location: null,
+    currentRole: { value: { title: "Engineer", company: "Acme" }, sources: [src()], confidence: 0.8 },
+    about: null,
+    experience: [
+      {
+        id: "exp-1",
+        title: "Engineer",
+        company: "Acme",
+        start: { year: 2018 },
+        current: true,
+        description: "Shipped the billing service. Cut p99 from 800ms to 120ms for 2m requests/day.",
+        sources: [src()],
+        confidence: 0.8,
+      },
+    ],
+    education: [{ id: "edu-1", school: "State", sources: [src()], confidence: 0.8 }],
+    skills: [],
+    certifications: [],
+    projects: [],
+    publications: [],
+    volunteer: [],
+    links: [],
+    missing: [],
+    confidence: 0.8,
+    coverage: { populated: 5, total: 14 },
+    synthetic: false,
+    providers: [{ provider: "wikidata", label: "Wikidata", status: "ok", durationMs: 10 }],
+    generatedAt: NOW.toISOString(),
+    larp: { percent: 0, verdict: "grounded", line: "", signals: [] },
+    ...over,
+  };
+}
+
+const src = () => ({ provider: "a", label: "A", observedAt: NOW.toISOString(), confidence: 0.8 });
+
+describe("scoreLarp", () => {
+  it("stays inside 0–100 and bands the verdict", () => {
+    expect(verdictFor(0)).toBe("grounded");
+    expect(verdictFor(25)).toBe("polished");
+    expect(verdictFor(50)).toBe("inflated");
+    expect(verdictFor(75)).toBe("full-larp");
+    const s = scoreLarp(profile(), NOW);
+    expect(s.percent).toBeGreaterThanOrEqual(0);
+    expect(s.percent).toBeLessThanOrEqual(100);
+    expect(Number.isInteger(s.percent)).toBe(true);
+  });
+
+  it("scores a specific, long-tenure profile as grounded", () => {
+    const s = scoreLarp(profile(), NOW);
+    expect(s.verdict).toBe("grounded");
+    expect(s.percent).toBeLessThan(25);
+  });
+
+  it("scores theater titles, buzzwords and stacked roles as full larp", () => {
+    const s = scoreLarp(
+      profile({
+        headline: {
+          value: "Visionary Founder | 10x Thought Leader | Serial Entrepreneur | Disrupting the ecosystem",
+          sources: [src()],
+          confidence: 0.8,
+        },
+        about: {
+          value: "Passionate guru and ninja. On a mission, changing the world. Award-winning personal brand!!! 🚀🚀",
+          sources: [src()],
+          confidence: 0.8,
+        },
+        currentRole: { value: { title: "Visionary Founder", company: "Me" }, sources: [src()], confidence: 0.8 },
+        experience: ["Alpha", "Beta", "Gamma"].map((company, i) => ({
+          id: `exp-${i}`,
+          title: "Founder & CEO",
+          company,
+          start: { year: 2025 },
+          current: true,
+          sources: [src()],
+          confidence: 0.8,
+        })),
+        education: [],
+        skills: Array.from({ length: 32 }, (_, i) => ({ id: `s-${i}`, name: `Skill ${i}`, sources: [src()], confidence: 0.5 })),
+        synthetic: true,
+        providers: [{ provider: "demo", label: "Demo", status: "ok" as const, durationMs: 1 }],
+      }),
+      NOW,
+    );
+    expect(s.percent).toBeGreaterThanOrEqual(75);
+    expect(s.verdict).toBe("full-larp");
+    expect(s.signals.some((x) => x.id === "headline-buzz" && x.points > 0)).toBe(true);
+    expect(s.signals.some((x) => x.id === "theater-title")).toBe(true);
+  });
+});
