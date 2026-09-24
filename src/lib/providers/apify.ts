@@ -30,8 +30,18 @@ import { arr, classifyLink, fetchJson, httpUrl, str, toPartialDate } from "./uti
 const ID = "apify";
 const LABEL = "LinkedIn";
 const LICENSE = "Public profile";
-const DEFAULT_ACTOR = "harvestapi~linkedin-profile-scraper";
 const NO_EMAIL_MODE = "Profile details no email ($4 per 1k)";
+
+/** Tried in order. The first actor that returns a profile wins. */
+const ACTORS: { id: string; input: (url: string) => Rec }[] = [
+  { id: "supreme_coder~linkedin-profile-scraper", input: (url) => ({ urls: [url] }) },
+  { id: "datadoping~linkedin-profile-scraper", input: (url) => ({ profiles: [url] }) },
+  { id: "bestscrapers~fresh-linkedin-profile-data", input: (url) => ({ linkedin_url: url }) },
+  {
+    id: "harvestapi~linkedin-profile-scraper",
+    input: (url) => ({ profileScraperMode: NO_EMAIL_MODE, queries: [url] }),
+  },
+];
 
 type Rec = Record<string, unknown>;
 
@@ -65,13 +75,20 @@ function endorsements(v: unknown): number | undefined {
   return m ? Number(m[1].replace(/,/g, "")) : undefined;
 }
 
-export function mapApify(d: Rec): ProviderProfile {
+export function mapApify(input: Rec): ProviderProfile {
+  const nested = input.data;
+  const d =
+    nested && typeof nested === "object" && !Array.isArray(nested)
+      ? { ...input, ...(nested as Rec) }
+      : input;
   const experience: ExperienceInput[] = [];
-  for (const raw of arr(d.experience) as Rec[]) {
-    const company = str(raw.companyName) ?? str(raw.company);
+  const experienceRows = (arr(d.experience).length ? arr(d.experience) : arr(d.experiences)) as Rec[];
+  for (const raw of experienceRows) {
+    const company = str(raw.companyName) ?? str(raw.company) ?? str(raw.company_name);
     if (!company) continue;
-    const start = apifyDate(raw.startDate);
-    const end = isPresent(raw.endDate) ? undefined : apifyDate(raw.endDate);
+    const start = apifyDate(raw.startDate ?? raw.start_date ?? raw.starts_at);
+    const endRaw = raw.endDate ?? raw.end_date ?? raw.ends_at;
+    const end = isPresent(endRaw) ? undefined : apifyDate(endRaw);
     const current = isPresent(raw.endDate) || Boolean(start && !raw.endDate);
     experience.push({
       company,
@@ -192,14 +209,16 @@ export function mapApify(d: Rec): ProviderProfile {
         ? str((loc as Rec).linkedinText) ?? str(((loc as Rec).parsed as Rec | undefined)?.text)
         : undefined;
 
-  const fullName = str(d.fullName) ?? [str(d.firstName), str(d.lastName)].filter(Boolean).join(" ");
+  const fullName = str(d.fullName) ?? str(d.full_name) ?? [str(d.firstName) ?? str(d.first_name), str(d.lastName) ?? str(d.last_name)].filter(Boolean).join(" ");
   const current = (arr(d.currentPosition)[0] ?? {}) as Rec;
   const currentCompany = str(current.companyName) ?? experience.find((e) => e.current)?.company;
   const currentTitle = str(current.position) ?? experience.find((e) => e.current)?.title;
 
   return {
     ...(fullName ? { fullName } : {}),
-    ...(httpUrl(d.photo) ?? httpUrl(d.profilePicture) ? { photoUrl: httpUrl(d.photo) ?? httpUrl(d.profilePicture) } : {}),
+    ...(httpUrl(d.photo) ?? httpUrl(d.profilePicture) ?? httpUrl(d.profile_image_url) ?? httpUrl(d.profilePictureUrl)
+      ? { photoUrl: httpUrl(d.photo) ?? httpUrl(d.profilePicture) ?? httpUrl(d.profile_image_url) ?? httpUrl(d.profilePictureUrl) }
+      : {}),
     ...(str(d.headline) ? { headline: str(d.headline) } : {}),
     ...(location ? { location } : {}),
     ...(currentTitle ? { currentTitle } : {}),
@@ -216,17 +235,20 @@ export function mapApify(d: Rec): ProviderProfile {
   };
 }
 
-function actorId(env: RuntimeEnv): string {
-  const raw = env.APIFY_LINKEDIN_ACTOR?.trim() || DEFAULT_ACTOR;
-  return raw.replace("/", "~");
+function actorChain(env: RuntimeEnv): { id: string; input: (url: string) => Rec }[] {
+  const override = env.APIFY_LINKEDIN_ACTOR?.trim();
+  if (!override) return ACTORS;
+  const id = override.replace("/", "~");
+  const known = ACTORS.find((a) => a.id === id);
+  return [known ?? { id, input: (url) => ({ queries: [url], urls: [url], profiles: [url], profileUrls: [url], linkedin_url: url }) }];
 }
 
 const SAVED_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EMPTY_TTL_SECONDS = 7 * 24 * 60 * 60;
 const savedKey = (slug: string) => `apify:v1:${slug}`;
 const lockKey = (slug: string) => `apify:lock:${slug}`;
-const PAUSE_KEY = "apify:paused";
-const PAUSE_NOTE = "LinkedIn lookups are paused. This account hit its free run limit.";
+const pauseKey = (actor: string) => `apify:paused:${actor}`;
+const LIMIT_NOTE = "LinkedIn lookups are paused. This account hit its free run limit.";
 
 type Saved = { status: "ok"; profile: ProviderProfile; observedAt: string } | { status: "empty"; observedAt: string };
 
@@ -247,7 +269,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
   const token = env.APIFY_TOKEN;
-  const actor = actorId(env);
+  const actors = actorChain(env);
   const kv = env.PROFILE_CACHE;
   return {
     id: ID,
@@ -255,17 +277,13 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
     phase: "primary",
     baseConfidence: 0.84,
     license: LICENSE,
-    timeoutMs: intFromEnv(env.APIFY_TIMEOUT_MS, 55_000),
+    timeoutMs: intFromEnv(env.APIFY_TIMEOUT_MS, 90_000),
     isEnabled: () => Boolean(token),
     disabledReason: () => "APIFY_TOKEN not set — LinkedIn profiles need an Apify token",
 
     async lookup(input: LookupInput, ctx: LookupContext): Promise<ProviderOutcome> {
       if (input.slug === DEMO_SLUG || input.slug === LARP_SLUG) {
         return { status: "skipped", note: "Sample profiles are not fetched from LinkedIn." };
-      }
-
-      if (kv && (await kv.get(PAUSE_KEY))) {
-        return { status: "unavailable", note: PAUSE_NOTE };
       }
 
       const readSaved = async () => (kv ? kv.get<Saved>(savedKey(input.slug), "json") : null);
@@ -282,7 +300,7 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
           }
           return { status: "unavailable", note: "This profile is already being fetched." };
         }
-        await kv.put(lockKey(input.slug), "1", { expirationTtl: 90 });
+        await kv.put(lockKey(input.slug), "1", { expirationTtl: 120 });
       }
 
       try {
@@ -292,68 +310,82 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
       }
 
       async function fetchOnce(): Promise<ProviderOutcome> {
-      const timeoutSec = Math.max(10, Math.floor((intFromEnv(env.APIFY_TIMEOUT_MS, 55_000) - 4000) / 1000));
-      const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actor)}/run-sync-get-dataset-items?timeout=${timeoutSec}`;
-      const { status, body } = await fetchJson(url, {
-        method: "POST",
-        signal: ctx.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          profileScraperMode: NO_EMAIL_MODE,
-          queries: [input.canonicalUrl],
-        }),
-      });
+        const observedAt = new Date().toISOString();
+        const meta = {
+          provider: ID,
+          label: LABEL,
+          observedAt,
+          baseConfidence: 0.84,
+          license: LICENSE,
+          sourceUrl: input.canonicalUrl,
+        };
+        let sawLimit = false;
+        let lastNote = "No public profile for this handle.";
 
-      const observedAt = new Date().toISOString();
-      const meta = {
-        provider: ID,
-        label: LABEL,
-        observedAt,
-        baseConfidence: 0.84,
-        license: LICENSE,
-        sourceUrl: input.canonicalUrl,
-      };
+        for (const actor of actors) {
+          if (ctx.signal.aborted) break;
+          if (kv && (await kv.get(pauseKey(actor.id)))) {
+            sawLimit = true;
+            continue;
+          }
+          const timeoutSec = 25;
+          const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actor.id)}/run-sync-get-dataset-items?timeout=${timeoutSec}`;
+          let status = 0;
+          let body: unknown = null;
+          try {
+            const res = await fetchJson(url, {
+              method: "POST",
+              signal: ctx.signal,
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify(actor.input(input.canonicalUrl)),
+            });
+            status = res.status;
+            body = res.body;
+          } catch {
+            lastNote = "A LinkedIn source timed out.";
+            continue;
+          }
 
-      if (status === 401 || status === 403) return { status: "error", note: "Apify rejected the API token." };
-      if (status === 402) return { status: "unavailable", note: "Apify account has no credit for this Actor run." };
-      if (status === 404) return { status: "error", note: `Apify actor “${actor}” was not found.` };
-      if (status === 408 || status === 504) return { status: "unavailable", note: "The Apify run did not finish in time." };
-      if (status === 429) return { status: "unavailable", note: "Apify rate limit reached." };
-      if (status !== 200 && status !== 201) {
-        const message = body && typeof body === "object" ? str((body as Rec).error && ((body as Rec).error as Rec).message) : undefined;
-        return { status: "error", note: message ?? `Apify responded ${status}.` };
-      }
+          if (status === 401 || status === 403) return { status: "error", note: "The API token was rejected." };
+          if (status === 402) return { status: "unavailable", note: "The account has no credit left." };
+          if (status === 404 || status === 400 || status === 408 || status === 429 || status === 504 || (status !== 200 && status !== 201)) {
+            lastNote = "A LinkedIn source failed.";
+            continue;
+          }
 
-      const items = Array.isArray(body) ? body : arr((body as Rec | null)?.items);
-      const first = items.find((it) => it && typeof it === "object") as Rec | undefined;
-      const actorError = first ? str(first.error) ?? str(first.errorMessage) : undefined;
-      if (actorError) {
-        if (/limited to \d+ runs|paid plan|run limit/i.test(actorError)) {
-          await kv?.put(PAUSE_KEY, "1", { expirationTtl: 60 * 60 });
-          return { status: "unavailable", note: PAUSE_NOTE };
+          const items = Array.isArray(body) ? body : arr((body as Rec | null)?.items);
+          const first = items.find((it) => it && typeof it === "object") as Rec | undefined;
+          const actorError = first ? str(first.error) ?? str(first.errorMessage) : undefined;
+          if (actorError) {
+            if (/limited to \d+ runs|paid plan|run limit/i.test(actorError)) {
+              sawLimit = true;
+              await kv?.put(pauseKey(actor.id), "1", { expirationTtl: 6 * 60 * 60 });
+              continue;
+            }
+            lastNote = "A LinkedIn source failed.";
+            continue;
+          }
+          if (!first) continue;
+          const profile = mapApify(first);
+          if (!profile.fullName && !profile.headline && !profile.experience?.length) continue;
+          await remember({ status: "ok", profile, observedAt });
+          return { status: "ok", profile, meta };
         }
-        return { status: "error", note: actorError.slice(0, 160) };
-      }
-      if (!first) {
-        await remember({ status: "empty", observedAt });
-        return { status: "empty", meta, note: "No public profile for this handle." };
-      }
-      const profile = mapApify(first);
-      if (!profile.fullName && !profile.headline && !profile.experience?.length) {
-        await remember({ status: "empty", observedAt });
-        return { status: "empty", meta, note: "No usable public profile for this handle." };
-      }
-      await remember({ status: "ok", profile, observedAt });
-      return { status: "ok", profile, meta };
 
-      async function remember(entry: Saved) {
-        const ttl = entry.status === "ok" ? SAVED_TTL_SECONDS : EMPTY_TTL_SECONDS;
-        await kv?.put(savedKey(input.slug), JSON.stringify(entry), { expirationTtl: ttl });
-      }
+        if (sawLimit && lastNote.startsWith("No public")) {
+          return { status: "unavailable", note: LIMIT_NOTE };
+        }
+        await remember({ status: "empty", observedAt });
+        return { status: "empty", meta, note: lastNote };
+
+        async function remember(entry: Saved) {
+          const ttl = entry.status === "ok" ? SAVED_TTL_SECONDS : EMPTY_TTL_SECONDS;
+          await kv?.put(savedKey(input.slug), JSON.stringify(entry), { expirationTtl: ttl });
+        }
       }
     },
   };
