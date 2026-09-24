@@ -154,9 +154,12 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
 
   if (!merged.length) {
     const anyError = runs.some((r) => r.status === "error" || r.status === "unavailable");
-    const note = anyError
-      ? "No source could return this profile right now."
-      : "None of the configured sources have a public record for this handle.";
+    const paused = runs.find((r) => /free run limit/i.test(r.note ?? ""));
+    const note = paused
+      ? paused.note!
+      : anyError
+        ? "No source could return this profile right now."
+        : "None of the configured sources have a public record for this handle.";
     if (!anyError) await cache.set(CACHE_KEYS.notFound(slug), { note }, DEFAULTS.notFoundTtlSeconds);
     throw new AppError(anyError ? "UPSTREAM_ERROR" : "NOT_FOUND", note, {
       details: { slug, providers: runs.map((r) => ({ provider: r.provider, status: r.status, note: r.note })) },

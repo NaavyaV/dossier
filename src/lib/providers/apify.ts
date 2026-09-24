@@ -225,6 +225,8 @@ const SAVED_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EMPTY_TTL_SECONDS = 7 * 24 * 60 * 60;
 const savedKey = (slug: string) => `apify:v1:${slug}`;
 const lockKey = (slug: string) => `apify:lock:${slug}`;
+const PAUSE_KEY = "apify:paused";
+const PAUSE_NOTE = "LinkedIn lookups are paused. This account hit its free run limit.";
 
 type Saved = { status: "ok"; profile: ProviderProfile; observedAt: string } | { status: "empty"; observedAt: string };
 
@@ -260,6 +262,10 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
     async lookup(input: LookupInput, ctx: LookupContext): Promise<ProviderOutcome> {
       if (input.slug === DEMO_SLUG || input.slug === LARP_SLUG) {
         return { status: "skipped", note: "Sample profiles are not fetched from LinkedIn." };
+      }
+
+      if (kv && (await kv.get(PAUSE_KEY))) {
+        return { status: "unavailable", note: PAUSE_NOTE };
       }
 
       const readSaved = async () => (kv ? kv.get<Saved>(savedKey(input.slug), "json") : null);
@@ -324,6 +330,14 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
 
       const items = Array.isArray(body) ? body : arr((body as Rec | null)?.items);
       const first = items.find((it) => it && typeof it === "object") as Rec | undefined;
+      const actorError = first ? str(first.error) ?? str(first.errorMessage) : undefined;
+      if (actorError) {
+        if (/limited to \d+ runs|paid plan|run limit/i.test(actorError)) {
+          await kv?.put(PAUSE_KEY, "1", { expirationTtl: 60 * 60 });
+          return { status: "unavailable", note: PAUSE_NOTE };
+        }
+        return { status: "error", note: actorError.slice(0, 160) };
+      }
       if (!first) {
         await remember({ status: "empty", observedAt });
         return { status: "empty", meta, note: "No public profile for this handle." };

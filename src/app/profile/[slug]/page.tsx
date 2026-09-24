@@ -57,7 +57,7 @@ const ERROR_COPY: Record<AppError["code"], { title: string; hint: string }> = {
   RATE_LIMITED: { title: "Too many lookups from your network", hint: "Wait a moment and try again. Cached profiles are always available." },
   NOT_FOUND: { title: "No public record for this handle", hint: "Nothing public turned up for this LinkedIn profile." },
   NO_PROVIDERS: { title: "No data sources are configured", hint: "LinkedIn lookups are not set up on this deployment." },
-  UPSTREAM_ERROR: { title: "Sources didn't respond", hint: "One or more providers failed or timed out. Try again shortly." },
+  UPSTREAM_ERROR: { title: "LinkedIn didn't return a profile", hint: "" },
   TIMEOUT: { title: "Sources took too long", hint: "Try again shortly." },
   INTERNAL: { title: "Something went wrong", hint: "The error has been logged. Try again, or try a different handle." },
 };
@@ -67,7 +67,7 @@ function ErrorState({ error }: { error: AppError }) {
   return (
     <div className="mx-auto max-w-md pt-16 text-center">
       <h1 className="display text-[2rem] text-ink">{copy.title}</h1>
-      <p className="mt-3 text-[15px] leading-6 text-ink-2">{copy.hint}</p>
+      <p className="mt-3 text-[15px] leading-6 text-ink-2">{error.message}</p>
       <Link href="/" className="mt-6 inline-block text-[15px] text-ink hover:underline">
         Try another profile
       </Link>
