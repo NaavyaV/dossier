@@ -34,7 +34,7 @@ const NO_EMAIL_MODE = "Profile details no email ($4 per 1k)";
 
 /** Tried in order. The first actor that returns a profile wins. */
 const ACTORS: { id: string; input: (url: string) => Rec }[] = [
-  { id: "supreme_coder~linkedin-profile-scraper", input: (url) => ({ urls: [url] }) },
+  { id: "supreme_coder~linkedin-profile-scraper", input: (url) => ({ urls: [{ url }] }) },
   { id: "datadoping~linkedin-profile-scraper", input: (url) => ({ profiles: [url] }) },
   { id: "bestscrapers~fresh-linkedin-profile-data", input: (url) => ({ linkedin_url: url }) },
   {
@@ -245,7 +245,7 @@ function actorChain(env: RuntimeEnv): { id: string; input: (url: string) => Rec 
 
 const SAVED_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EMPTY_TTL_SECONDS = 7 * 24 * 60 * 60;
-const savedKey = (slug: string) => `apify:v1:${slug}`;
+const savedKey = (slug: string) => `apify:v2:${slug}`;
 const lockKey = (slug: string) => `apify:lock:${slug}`;
 const pauseKey = (actor: string) => `apify:paused:${actor}`;
 const LIMIT_NOTE = "LinkedIn lookups are paused. This account hit its free run limit.";
@@ -328,7 +328,7 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
             sawLimit = true;
             continue;
           }
-          const timeoutSec = 25;
+          const timeoutSec = 40;
           const url = `https://api.apify.com/v2/acts/${encodeURIComponent(actor.id)}/run-sync-get-dataset-items?timeout=${timeoutSec}`;
           let status = 0;
           let body: unknown = null;
