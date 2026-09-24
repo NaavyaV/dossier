@@ -36,7 +36,6 @@ const NO_EMAIL_MODE = "Profile details no email ($4 per 1k)";
 const ACTORS: { id: string; input: (url: string) => Rec }[] = [
   { id: "supreme_coder~linkedin-profile-scraper", input: (url) => ({ urls: [{ url }] }) },
   { id: "datadoping~linkedin-profile-scraper", input: (url) => ({ profiles: [url] }) },
-  { id: "bestscrapers~fresh-linkedin-profile-data", input: (url) => ({ linkedin_url: url }) },
   {
     id: "harvestapi~linkedin-profile-scraper",
     input: (url) => ({ profileScraperMode: NO_EMAIL_MODE, queries: [url] }),
