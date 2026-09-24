@@ -21,7 +21,7 @@ export async function GET() {
       time: new Date().toISOString(),
       infra: {
         cache: env.PROFILE_CACHE ? "kv" : "memory",
-        rateLimit: env.RATE_LIMIT ? "kv" : "memory",
+        rateLimit: env.PROFILE_RATE_LIMIT ? "binding" : "memory",
       },
       providers,
     },

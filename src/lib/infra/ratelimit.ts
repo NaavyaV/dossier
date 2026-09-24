@@ -1,10 +1,8 @@
+import type { RateLimitBinding } from "@/lib/infra/env";
+
 /**
- * Fixed-window rate limiter keyed by client identity (IP).
- *
- * KV is eventually consistent and non-atomic, so this is a soft limit — good
- * enough to stop casual abuse and protect paid upstream quotas. Swap in a
- * Durable Object or the Workers Rate Limiting binding for hard guarantees by
- * implementing `RateLimiter`.
+ * Rate limiter keyed by client IP.
+ * Production uses the Workers Rate Limiting binding, which does not write KV.
  */
 
 export type RateLimitDecision = {
@@ -53,35 +51,29 @@ export class MemoryRateLimiter implements RateLimiter {
   }
 }
 
-export class KVRateLimiter implements RateLimiter {
+export class BindingRateLimiter implements RateLimiter {
   constructor(
-    private kv: KVNamespace,
+    private binding: RateLimitBinding,
     private cfg: RateLimitConfig,
   ) {}
 
   async check(identity: string): Promise<RateLimitDecision> {
-    const now = Date.now();
-    const { start, resetAt } = windowFor(now, this.cfg.windowSeconds);
-    const key = `rl:v1:${identity}:${start}`;
-    const raw = await this.kv.get(key);
-    const n = (raw ? Number.parseInt(raw, 10) || 0 : 0) + 1;
-    // Write-behind; a few over-counts under contention are acceptable.
-    await this.kv.put(key, String(n), { expirationTtl: Math.max(60, this.cfg.windowSeconds + 5) });
-    const allowed = n <= this.cfg.max;
+    const { success } = await this.binding.limit({ key: identity });
+    const now = Math.floor(Date.now() / 1000);
     return {
-      allowed,
+      allowed: success,
       limit: this.cfg.max,
-      remaining: Math.max(0, this.cfg.max - n),
-      resetAt,
-      retryAfterSeconds: allowed ? 0 : Math.max(1, resetAt - Math.floor(now / 1000)),
+      remaining: success ? this.cfg.max : 0,
+      resetAt: now + this.cfg.windowSeconds,
+      retryAfterSeconds: success ? 0 : this.cfg.windowSeconds,
     };
   }
 }
 
 const globalForRl = globalThis as unknown as { __dossierMemoryRl?: Map<string, MemoryRateLimiter> };
 
-export function createRateLimiter(cfg: RateLimitConfig, kv?: KVNamespace): RateLimiter {
-  if (kv) return new KVRateLimiter(kv, cfg);
+export function createRateLimiter(cfg: RateLimitConfig, binding?: RateLimitBinding): RateLimiter {
+  if (binding) return new BindingRateLimiter(binding, cfg);
   const k = `${cfg.max}:${cfg.windowSeconds}`;
   globalForRl.__dossierMemoryRl ??= new Map();
   let rl = globalForRl.__dossierMemoryRl.get(k);

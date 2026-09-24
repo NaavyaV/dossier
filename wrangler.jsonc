@@ -15,10 +15,13 @@
     {
       "binding": "PROFILE_CACHE",
       "id": "85db57f791a34403af6d73d4da165793"
-    },
+    }
+  ],
+  "ratelimits": [
     {
-      "binding": "RATE_LIMIT",
-      "id": "edfa9f1e71d849dcb50e5fdf916dca0e"
+      "name": "PROFILE_RATE_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 20, "period": 60 }
     }
   ],
   "vars": {

@@ -1,5 +1,4 @@
 import { AppError } from "@/lib/errors";
-import { CACHE_KEYS, createCache } from "@/lib/infra/cache";
 import { getRuntimeEnv, intFromEnv } from "@/lib/infra/env";
 import { clientIdentity, createRateLimiter, type RateLimitDecision } from "@/lib/infra/ratelimit";
 import { parseLinkedInUrl } from "@/lib/linkedin/url";
@@ -36,16 +35,13 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
   const { slug, canonicalUrl } = parsed.value;
 
   const env = getRuntimeEnv();
-  const cache = createCache(env.PROFILE_CACHE);
   const ttl = intFromEnv(env.CACHE_TTL_SECONDS, DEFAULTS.cacheTtlSeconds);
 
-  // Rate limit only uncached work; cache hits are cheap and unmetered.
   let rateLimit: RateLimitDecision | undefined;
-  const checkRate = async () => {
-    if (!opts.headers) return;
+  if (opts.headers) {
     const rl = createRateLimiter(
-      { max: intFromEnv(env.RATE_LIMIT_MAX, DEFAULTS.rateLimitMax), windowSeconds: intFromEnv(env.RATE_LIMIT_WINDOW_SECONDS, DEFAULTS.rateLimitWindowSeconds) },
-      env.RATE_LIMIT,
+      { max: 20, windowSeconds: 60 },
+      env.PROFILE_RATE_LIMIT,
     );
     rateLimit = await rl.check(clientIdentity(opts.headers));
     if (!rateLimit.allowed) {
@@ -53,28 +49,7 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
         retryAfterSeconds: rateLimit.retryAfterSeconds,
       });
     }
-  };
-
-  if (!opts.refresh) {
-    const hit = await cache.get<ProfileEnvelope["profile"]>(CACHE_KEYS.profile(slug));
-    if (hit) {
-      const valid = Profile.safeParse(hit.value);
-      if (valid.success) {
-        return {
-          profile: { ...valid.data, larp: scoreLarp(valid.data) },
-          cache: { hit: true, cachedAt: hit.cachedAt, expiresAt: hit.expiresAt, ttlSeconds: ttl },
-        };
-      }
-      // Schema drift — drop the entry and refetch.
-      await cache.delete(CACHE_KEYS.profile(slug));
-    }
-    const nf = await cache.get<{ note: string }>(CACHE_KEYS.notFound(slug));
-    if (nf) {
-      throw new AppError("NOT_FOUND", nf.value.note, { details: { slug, cachedAt: nf.cachedAt } });
-    }
   }
-
-  await checkRate();
 
   const providers = buildProviders(env);
   const enabled = providers.filter((p) => p.isEnabled(env));
@@ -160,7 +135,6 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
       : anyError
         ? "No source could return this profile right now."
         : "None of the configured sources have a public record for this handle.";
-    if (!anyError) await cache.set(CACHE_KEYS.notFound(slug), { note }, DEFAULTS.notFoundTtlSeconds);
     throw new AppError(anyError ? "UPSTREAM_ERROR" : "NOT_FOUND", note, {
       details: { slug, providers: runs.map((r) => ({ provider: r.provider, status: r.status, note: r.note })) },
     });
@@ -169,7 +143,6 @@ export async function getProfile(input: string, opts: GetProfileOptions = {}): P
   const mergedProfile = mergeProfiles(merged, { slug, linkedinUrl: canonicalUrl, runs: sortRuns(runs) });
   const profile = { ...mergedProfile, larp: scoreLarp(mergedProfile) };
   const validated = Profile.parse(profile);
-  await cache.set(CACHE_KEYS.profile(slug), validated, ttl);
 
   const now = Date.now();
   return {

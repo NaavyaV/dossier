@@ -245,7 +245,6 @@ function actorChain(env: RuntimeEnv): { id: string; input: (url: string) => Rec 
 const SAVED_TTL_SECONDS = 30 * 24 * 60 * 60;
 const EMPTY_TTL_SECONDS = 7 * 24 * 60 * 60;
 const savedKey = (slug: string) => `apify:v2:${slug}`;
-const lockKey = (slug: string) => `apify:lock:${slug}`;
 const pauseKey = (actor: string) => `apify:paused:${actor}`;
 const LIMIT_NOTE = "LinkedIn lookups are paused. This account hit its free run limit.";
 
@@ -263,8 +262,6 @@ function outcomeFromSaved(saved: Saved, canonicalUrl: string): ProviderOutcome {
   if (saved.status === "empty") return { status: "empty", meta, note: "Already checked. No public profile." };
   return { status: "ok", profile: saved.profile, meta };
 }
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
   const token = env.APIFY_TOKEN;
@@ -289,24 +286,7 @@ export function createApifyProvider(env: RuntimeEnv): ProfileProvider {
       const saved = await readSaved();
       if (saved?.status === "ok" || saved?.status === "empty") return outcomeFromSaved(saved, input.canonicalUrl);
 
-      if (kv) {
-        const locked = await kv.get(lockKey(input.slug));
-        if (locked) {
-          for (let i = 0; i < 25 && !ctx.signal.aborted; i++) {
-            await sleep(1000);
-            const later = await readSaved();
-            if (later?.status === "ok" || later?.status === "empty") return outcomeFromSaved(later, input.canonicalUrl);
-          }
-          return { status: "unavailable", note: "This profile is already being fetched." };
-        }
-        await kv.put(lockKey(input.slug), "1", { expirationTtl: 120 });
-      }
-
-      try {
-        return await fetchOnce();
-      } finally {
-        await kv?.delete(lockKey(input.slug));
-      }
+      return await fetchOnce();
 
       async function fetchOnce(): Promise<ProviderOutcome> {
         const observedAt = new Date().toISOString();

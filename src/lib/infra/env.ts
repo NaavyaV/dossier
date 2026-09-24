@@ -7,9 +7,13 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
  *  - plain Node (tests) — bindings are undefined, secrets from process.env
  */
 
+export type RateLimitBinding = {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+};
+
 export type Bindings = {
   PROFILE_CACHE?: KVNamespace;
-  RATE_LIMIT?: KVNamespace;
+  PROFILE_RATE_LIMIT?: RateLimitBinding;
 };
 
 export type Secrets = {
@@ -49,7 +53,7 @@ export function getRuntimeEnv(): RuntimeEnv {
 
   return {
     PROFILE_CACHE: cf.PROFILE_CACHE as KVNamespace | undefined,
-    RATE_LIMIT: cf.RATE_LIMIT as KVNamespace | undefined,
+    PROFILE_RATE_LIMIT: cf.PROFILE_RATE_LIMIT as RateLimitBinding | undefined,
     APIFY_TOKEN: pick("APIFY_TOKEN"),
     APIFY_LINKEDIN_ACTOR: pick("APIFY_LINKEDIN_ACTOR"),
     APIFY_TIMEOUT_MS: pick("APIFY_TIMEOUT_MS"),
