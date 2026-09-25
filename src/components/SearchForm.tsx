@@ -8,9 +8,10 @@ type Props = {
   size?: "lg" | "sm";
   defaultValue?: string;
   autoFocus?: boolean;
+  disabled?: boolean;
 };
 
-export function SearchForm({ size = "lg", defaultValue = "", autoFocus = false }: Props) {
+export function SearchForm({ size = "lg", defaultValue = "", autoFocus = false, disabled = false }: Props) {
   const router = useRouter();
   const id = useId();
   const [value, setValue] = useState(defaultValue);
@@ -19,6 +20,7 @@ export function SearchForm({ size = "lg", defaultValue = "", autoFocus = false }
 
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (disabled) return;
     const r = parseLinkedInUrl(value);
     if (!r.ok) {
       setError(r.error.message);
@@ -51,6 +53,7 @@ export function SearchForm({ size = "lg", defaultValue = "", autoFocus = false }
           autoComplete="off"
           spellCheck={false}
           autoFocus={autoFocus}
+          disabled={disabled}
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
@@ -63,7 +66,7 @@ export function SearchForm({ size = "lg", defaultValue = "", autoFocus = false }
         />
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || disabled}
           className={`mr-1 inline-flex shrink-0 items-center justify-center rounded-md bg-ink font-medium text-white transition-colors hover:bg-accent disabled:opacity-60 ${
             lg ? "h-9 px-4 text-[14px]" : "h-8 px-3 text-[13px]"
           }`}

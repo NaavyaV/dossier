@@ -3,6 +3,7 @@ import { getRuntimeEnv, intFromEnv } from "@/lib/infra/env";
 import { clientIdentity, createRateLimiter, type RateLimitDecision } from "@/lib/infra/ratelimit";
 import { parseLinkedInUrl } from "@/lib/linkedin/url";
 import { scoreLarp } from "@/lib/larp/score";
+import { PAUSED_MESSAGE, SERVICE_PAUSED } from "@/lib/service/paused";
 import { mergeProfiles, type MergeInput } from "@/lib/merge/merge";
 import { buildProviders } from "@/lib/providers/registry";
 import type { ProfileProvider, ProviderOutcome } from "@/lib/providers/types";
@@ -30,6 +31,10 @@ export type GetProfileResult = ProfileEnvelope & { rateLimit?: RateLimitDecision
  * Throws AppError for every failure path.
  */
 export async function getProfile(input: string, opts: GetProfileOptions = {}): Promise<GetProfileResult> {
+  if (SERVICE_PAUSED) {
+    throw new AppError("UPSTREAM_ERROR", PAUSED_MESSAGE);
+  }
+
   const parsed = parseLinkedInUrl(input);
   if (!parsed.ok) throw new AppError("INVALID_INPUT", parsed.error.message, { details: { code: parsed.error.code } });
   const { slug, canonicalUrl } = parsed.value;

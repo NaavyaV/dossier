@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { DownNote } from "@/components/DownNote";
 import { SearchForm } from "@/components/SearchForm";
 import { TopBar } from "@/components/ui";
+import { SERVICE_PAUSED } from "@/lib/service/paused";
 
 const EXAMPLES = [
   { slug: "larp", label: "Full LARP" },
@@ -18,8 +20,9 @@ export default function HomePage() {
           <br />
           or is it larp?
         </h1>
-        <div className="mt-8 w-full max-w-xl">
-          <SearchForm size="lg" autoFocus />
+        {SERVICE_PAUSED ? <div className="mt-8"><DownNote /></div> : null}
+        <div className={`w-full max-w-xl ${SERVICE_PAUSED ? "" : "mt-8"}`}>
+          <SearchForm size="lg" autoFocus={!SERVICE_PAUSED} disabled={SERVICE_PAUSED} />
         </div>
         <div className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[15px]">
           {EXAMPLES.map((e) => (

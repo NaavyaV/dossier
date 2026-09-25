@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { SearchForm } from "@/components/SearchForm";
+import { DownNote } from "@/components/DownNote";
 import { ProfileCard } from "@/components/dossier/Card";
 import { TopBar } from "@/components/ui";
 import { toAppError, type AppError } from "@/lib/errors";
 import { getProfile, type GetProfileResult } from "@/lib/service/getProfile";
+import { SERVICE_PAUSED } from "@/lib/service/paused";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +32,7 @@ export default async function ProfilePage({
   let result: GetProfileResult | null = null;
   let error: AppError | null = null;
   try {
-    result = await getProfile(slug, { refresh: refresh === "1", headers: await headers() });
+    if (!SERVICE_PAUSED) result = await getProfile(slug, { refresh: refresh === "1", headers: await headers() });
   } catch (e) {
     error = toAppError(e);
     if (error.code === "INTERNAL") console.error("[profile page]", e);
@@ -42,7 +44,9 @@ export default async function ProfilePage({
         <SearchForm size="sm" />
       </TopBar>
       <main className="flex flex-1 justify-center px-4 py-8 sm:py-12">
-        {error || !result ? (
+        {SERVICE_PAUSED ? (
+          <DownNote />
+        ) : error || !result ? (
           <ErrorState error={error ?? toAppError(new Error("empty"))} />
         ) : (
           <ProfileCard profile={result.profile} />
